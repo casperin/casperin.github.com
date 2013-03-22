@@ -89,6 +89,7 @@
         'submitBtnSelector': '[type=submit]',
         'metricsSplitter': ':',
         'errorPosClasses': ['.help-inline', '.add-on'],
+        'broadcastError': false,
         'errorClass': 'nod_msg',
         'groupSelector': '.control-group'
       }, options);
@@ -180,7 +181,7 @@
         if (field.length !== 3) {
           throw this.err[0] + field;
         }
-        nodMsgVars = [field[2], this.get.helpSpanDisplay, this.get.errorClass, this.get.errorPosClasses];
+        nodMsgVars = [field[2], this.get.helpSpanDisplay, this.get.errorClass, this.get.errorPosClasses, this.get.broadcastError];
         listenVars = [this.makeChecker(field[1]), this.get.delay];
         _ref1 = $(field[0]);
         for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
@@ -196,9 +197,14 @@
 
     Nod.prototype.makeChecker = function(m) {
       var arg, sec, type, _ref;
-      if (typeof m === 'function') {
+      if (!!(m && m.constructor && m.call && m.apply)) {
         return function(v) {
           return m(v);
+        };
+      }
+      if (m instanceof RegExp) {
+        return function(v) {
+          return m.test(v);
         };
       }
       _ref = $.map(m.split(this.get.metricsSplitter), $.trim), type = _ref[0], arg = _ref[1], sec = _ref[2];
@@ -271,7 +277,7 @@
       this.events = __bind(this.events, this);
 
       msgArg = {};
-      msgArg.msg = vars[0], msgArg.display = vars[1], msgArg.cls = vars[2], this.pos_classes = vars[3];
+      msgArg.msg = vars[0], msgArg.display = vars[1], msgArg.cls = vars[2], this.pos_classes = vars[3], this.broadcastError = vars[4];
       this.$msg = this.createMsg(msgArg);
       this.showMsg = this.createShowMsg();
       this.events();
@@ -292,7 +298,10 @@
       if (this.$el.status) {
         return this.$msg.remove();
       } else {
-        return this.showMsg();
+        this.showMsg();
+        if (this.broadcastError) {
+          return this.broadcast();
+        }
       }
     };
 
@@ -327,6 +336,15 @@
         }
       }
       return false;
+    };
+
+    NodMsg.prototype.broadcast = function() {
+      var data;
+      data = {
+        'el': this.$el,
+        'msg': this.$msg.html()
+      };
+      return $(window).trigger('nod_error_fired', data);
     };
 
     return NodMsg;
