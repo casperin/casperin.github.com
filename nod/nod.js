@@ -88,12 +88,15 @@
         'groupClass': 'error',
         'submitBtnSelector': '[type=submit]',
         'metricsSplitter': ':',
-        'errorPosClasses': ['.help-inline', '.add-on'],
+        'errorPosClasses': ['.help-inline', '.add-on', 'button', '.input-append'],
         'broadcastError': false,
         'errorClass': 'nod_msg',
         'groupSelector': '.control-group'
       }, options);
       this.err = ["Arguments for each field must have three parts: ", "Couldn't find any form: ", "Couldn't find any Submit button: ", "The selector in 'same-as' isn't working", "I don't know "];
+      if (!this.fields) {
+        return;
+      }
       this.els = this.createEls();
       this.submit = this.form.find(this.get.submitBtnSelector);
       this.checkIfElementsExist(this.form, this.submit, this.disableSubmitBtn);
@@ -111,7 +114,7 @@
 
     Nod.prototype.events = function() {
       var $el, _i, _len, _ref, _results;
-      this.submit.on('click', this.massCheck);
+      this.form.on('submit', this.massCheck);
       _ref = this.els;
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -320,18 +323,21 @@
     };
 
     NodMsg.prototype.findPos = function($el) {
-      if (this.nextElHasClass($el)) {
+      if (this.elHasClass('parent', $el)) {
+        return this.findPos($el.parent());
+      }
+      if (this.elHasClass('next', $el)) {
         return this.findPos($el.next());
       }
       return $el;
     };
 
-    NodMsg.prototype.nextElHasClass = function($el) {
+    NodMsg.prototype.elHasClass = function(dir, $el) {
       var s, _i, _len, _ref;
       _ref = this.pos_classes;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         s = _ref[_i];
-        if ($el.next(s).length) {
+        if ($el[dir](s).length) {
           return true;
         }
       }
