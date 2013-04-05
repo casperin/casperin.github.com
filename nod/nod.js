@@ -7,7 +7,7 @@
 
     function FieldListener($el, vars) {
       this.$el = $el;
-      this.createGetValue = __bind(this.createGetValue, this);
+      this.createChecker = __bind(this.createChecker, this);
 
       this.runCheck = __bind(this.runCheck, this);
 
@@ -17,15 +17,20 @@
 
       this.checker = vars[0], this.delay = vars[1];
       this.delayId = "";
-      this.getVal = this.createGetValue(this.$el);
-      this.events();
       this.$el.status = true;
+      this.type = this.$el.attr('type');
+      this.checkField = this.createChecker(this.$el);
+      this.events();
     }
 
     FieldListener.prototype.events = function() {
-      this.$el.on('keyup', this.delayedCheck);
-      this.$el.on('blur', this.runCheck);
-      return this.$el.on('change', this.runCheck);
+      if (this.type === 'radio') {
+        return jQuery('[name=' + this.$el.attr("name") + ']').on('change', this.runCheck);
+      } else {
+        this.$el.on('change', this.runCheck);
+        this.$el.on('keyup', this.delayedCheck);
+        return this.$el.on('blur', this.runCheck);
+      }
     };
 
     FieldListener.prototype.delayedCheck = function() {
@@ -35,21 +40,26 @@
 
     FieldListener.prototype.runCheck = function() {
       var isCorrect;
-      isCorrect = this.checker(this.getVal());
-      if (this.$el.status !== isCorrect) {
-        this.$el.status = isCorrect;
-        return this.$el.trigger('nod_toggle');
+      isCorrect = this.checkField();
+      if (this.$el.status === isCorrect) {
+        return;
       }
+      this.$el.status = isCorrect;
+      return this.$el.trigger('nod_toggle');
     };
 
-    FieldListener.prototype.createGetValue = function($el) {
-      if ($el.attr('type') === 'checkbox') {
+    FieldListener.prototype.createChecker = function($el) {
+      if (this.type === 'checkbox') {
         return function() {
-          return $el.is(':checked');
+          return this.checker($el.is(':checked'));
+        };
+      } else if (this.type === 'radio') {
+        return function() {
+          return !$el.is(':checked') || $el.is(':checked') === this.checker($el.val());
         };
       } else {
         return function() {
-          return jQuery.trim($el.val());
+          return this.checker(jQuery.trim($el.val()));
         };
       }
     };
@@ -187,7 +197,7 @@
         }
         nodMsgVars = [field[2], this.get.helpSpanDisplay, this.get.errorClass, this.get.errorPosClasses, this.get.broadcastError];
         listenVars = [this.makeChecker(field[1]), this.get.delay];
-        _ref1 = jQuery(field[0]);
+        _ref1 = this.form.find(field[0]);
         for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
           el = _ref1[_j];
           $el = jQuery(el);
@@ -222,31 +232,43 @@
           };
         case 'exact':
           return function(v) {
-            return v === arg;
+            return !v || v === arg;
           };
         case 'not':
           return function(v) {
-            return v !== arg;
+            return !v || v !== arg;
           };
         case 'same-as':
           return function(v) {
-            return v === jQuery(arg).val();
+            return !v || v === jQuery(arg).val();
+          };
+        case 'min-num':
+          return function(v) {
+            return !v || +v >= +arg;
+          };
+        case 'max-num':
+          return function(v) {
+            return !v || +v <= +arg;
+          };
+        case 'between-num':
+          return function(v) {
+            return !v || +v >= +arg && +v <= +sec;
           };
         case 'min-length':
           return function(v) {
-            return v.length >= arg;
+            return !v || v.length >= +arg;
           };
         case 'max-length':
           return function(v) {
-            return v.length <= arg;
+            return !v || v.length <= +arg;
           };
         case 'exact-length':
           return function(v) {
-            return v.length === arg;
+            return !v || v.length === +arg;
           };
         case 'between':
           return function(v) {
-            return v.length >= arg && v.length <= sec;
+            return !v || v.length >= +arg && v.length <= +sec;
           };
         case 'integer':
           return function(v) {
@@ -310,8 +332,9 @@
     };
 
     NodMsg.prototype.createShowMsg = function() {
-      var pos;
-      if (this.$el.attr('type') === 'checkbox') {
+      var pos, type;
+      type = this.$el.attr('type');
+      if (type === 'checkbox' || type === 'radio') {
         return function() {
           return this.$el.parent().append(this.$msg);
         };
