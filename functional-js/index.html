@@ -1,0 +1,495 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Functional js - lib1 - Documentation</title>
+  <link href="style.css" rel="stylesheet">
+  <script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+  <script src="utils.js"></script>
+  <script src="lib1.js"></script>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <nav>
+      <span data-show="all" class="current">all</span>
+      <span data-show="string">string</span>
+      <span data-show="array">array</span>
+      <span data-show="object">object</span>
+      <span data-show="number">number</span>
+      <span data-show="regexp">regexp</span>
+    </nav>
+    <ul>
+      <li class="string"><a href="#charAt">charAt</a></li>
+      <li class="string"><a href="#charCodeAt">charCodeAt</a></li>
+      <li class="string array"><a href="#concat">concat</a></li>
+      <li class="string array"><a href="#contains">contains</a></li>
+      <li class="string array"><a href="#endsWith">endsWith</a></li>
+      <li class="string"><a href="#exec">exec</a></li>
+      <li class="object"><a href="#hasOwnProperty">hasOwnProperty</a></li>
+      <li class="string array"><a href="#indexOf">indexOf</a></li>
+      <li class="object"><a href="#isPrototypeOf">isPrototypeOf</a></li>
+      <li class="array"><a href="#join">join</a></li>
+      <li class="string array"><a href="#lastIndexOf">lastIndexOf</a></li>
+      <li class="string array"><a href="#length">length</a></li>
+      <li class=""><a href="#localCompare">localCompare</a></li>
+      <li class=""><a href="#match">match</a></li>
+      <li class="string array"><a href="#pop">pop</a></li>
+      <li class="string array"><a href="#pop_">pop_</a></li>
+      <li class="string array"><a href="#push">push</a></li>
+      <li class=""><a href="#propertyIsEnumerable">propertyIsEnumerable</a></li>
+      <li class="string"><a href="#replace">replace</a></li>
+      <li class="string array"><a href="#reverse">reverse</a></li>
+      <li class="string"><a href="#search">search</a></li>
+      <li class="string array"><a href="#shift">shift</a></li>
+      <li class="string array"><a href="#shift_">shift_</a></li>
+      <li class="string array"><a href="#slice">slice</a></li>
+      <li class="string array"><a href="#sort">sort</a></li>
+      <li class="string array"><a href="#splice">splice</a></li>
+      <li class="string array"><a href="#splice_">splice_</a></li>
+      <li class="string array"><a href="#split">split</a></li>
+      <li class="string array"><a href="#startsWith">startsWith</a></li>
+      <li class="string"><a href="#substr">substr</a></li>
+      <li class="string"><a href="#substring">substring</a></li>
+      <li class="string"><a href="#test">test</a></li>
+      <li class="number"><a href="#toExponential">toExponential</a></li>
+      <li class="number"><a href="#toFixed">toFixed</a></li>
+      <li class="string"><a href="#toLocaleLowerCase">toLocaleLowerCase</a></li>
+      <li class="string"><a href="#toLocaleUpperCase">toLocaleUpperCase</a></li>
+      <li class="number"><a href="#toPrecision">toPrecision</a></li>
+      <li class="all"><a href="#toString">toString</a></li>
+      <li class="string"><a href="#toUpperCase">toUpperCase</a></li>
+      <li class="string"><a href="#trim">trim</a></li>
+      <li class="string"><a href="#trimLeft">trimLeft</a></li>
+      <li class="string"><a href="#trimRight">trimRight</a></li>
+      <li class="string array"><a href="#unshift">unshift</a></li>
+      <li class="all"><a href="#valueOf">valueOf</a></li>
+    </ul>
+  </aside>
+
+
+  <div class="container">
+
+    <iframe src="http://ghbtns.com/github-btn.html?user=casperin&repo=functional-js&type=fork&size=large"
+      allowtransparency="true" frameborder="0" scrolling="0" width="100" height="30" style="float:right"></iframe>
+
+    <h1>Functional-js: lib1 &ndash; the base</h1>
+
+    <p>This library takes all the methods on instances of strings, arrays, objects, numbers, and regexp's and turns them into functions that all:</p>
+    <ol>
+      <li>Are curried</li>
+      <li>Take only a fixed number of arguments</li>
+      <li>Returns a single value</li>
+      <li>Does not mess with the argument(s) you gave the function</li>
+    </ol>
+    <p>Example:</p>
+<section>
+<pre class="prettyprint lang-js">// Normal way:
+var a = [1, 2, 3];
+a.push(4); // &rarr; 4
+a; // &rarr; [1, 2, 3, 4]
+
+
+// lib1 way:
+var b = [1, 2, 3];
+push(4, b); // &rarr; [1, 2, 3, 4]
+b; // &rarr; [1, 2, 3] (b is unaltered)
+
+
+// We can also curry pop()
+var c = [1, 2, 3];
+var addFour = pop(4);
+addFour(c); // &rarr; [1, 2, 3, 4]
+
+
+// Functions that operate on arrays can (usually) also take strings
+// Just think of "hello" as ['h','e','l','l','o'] and it should make sense
+push(" world", "hello"); // &rarr; "hello world"
+
+</pre>
+
+<p>Together with a <code>compose()</code> we can do nice things like:</p>
+<pre class="prettyprint lang-js">// Currying some functions
+var fetchFirstSix = substr(0,6);
+var addName = push("Bill"); // concat() will work too
+
+// Combining them
+var greet = compose(addName, fetchFirstSix);
+
+greet("Hello world"); // &rarr; "Hello Bill"
+</pre>
+</section>
+
+<br><br><br>
+<h1>The docs</h1>
+
+<section id="charAt">
+<h2>charAt <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charAt">mdn</a></small></h2>
+<code class="sig">charAt :: int &rarr; "a" &rarr; "a"</code>
+<pre class="prettyprint lang-js">charAt(1, "Hello world"); // &rarr; "e"
+
+var thirdChar = charAt(2);
+thirdChar("Hello world"); // &rarr; "l"</pre>
+</section>
+
+<section id="charCodeAt">
+<h2>charCodeAt <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt">mdn</a></small></h2>
+<code class="sig">charCodeAt :: int &rarr; "a" &rarr; int</code>
+<pre class="prettyprint lang-js">charCodeAt(1, "Hello world"); // &rarr; 101</pre>
+</section>
+
+<section id="concat">
+<h2>concat <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/concat">mdn</a></small></h2>
+<code class="sig">concat :: a &rarr; a &rarr; a </code>
+<pre class="prettyprint lang-js">concat("foo", "bar"); // &rarr; "barfoo"
+
+concat("foo", [1, 2, 3] ); // &rarr; [1, 2, 3, "foo"]
+
+concat([4, 5], [1, 2, 3] ); // &rarr; [1, 2, 3, 4, 5]</pre>
+</section>
+
+<section id="contains">
+  <h2>contains <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/contains">mdn</a></small></h2>
+  <code class="sig">contains :: "a" &rarr; a &rarr; Boolean</code>
+<pre class="prettyprint lang-js">contains("foo", "foobar"); // &rarr; true
+
+contains("foo", [1, 2, "foo", 4] ); // &rarr; true
+
+contains("foo", [1, 2, "bar", 4]; // &rarr; false
+
+var hasBar = contains("bar");
+hasBar("foobar"); // &rarr; true</pre>
+</section>
+
+<section id="endsWith">
+  <h2>endsWith <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith">mdn</a></small></h2>
+  <code class="sig">endsWith :: "a" &rarr; a &rarr; Boolean </code>
+<pre class="prettyprint lang-js">endsWith( 'world', 'hello world' ); // &rarr; true
+
+endsWith('a', [1, 2, 3]); // &rarr; false
+
+endsWith('a', [1, 2, 3, 'a'] ); // &rarr; true</pre>
+</section>
+
+<section id="exec">
+  <h2>exec <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec">mdn</a></small></h2>
+  <code class="sig">exec :: RegExp &rarr; "a" &rarr; [a]</code>
+<pre class="prettyprint lang-js">exec( /(hello \S+)/, 'This is a hello world!')[1]; // &rarr; "hello world!" </pre>
+</section>
+
+<section id="hasOwnProperty">
+  <h2>hasOwnProperty <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwnProperty">mdn</a></small></h2>
+  <code class="sig">hasOwnProperty :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="indexOf">
+  <h2>indexOf <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf">mdn</a></small></h2>
+  <code class="sig">indexOf :: a &rarr; int</code>
+<pre class="prettyprint lang-js">indexOf( "o", "hello world!" ); // &rarr; 4
+
+indexOf( 2, [1, 2, 3] ); // &rarr; 1
+</pre>
+</section>
+
+<section id="isPrototypeOf">
+  <h2>isPrototypeOf <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/isPrototypeOf">mdn</a></small></h2>
+  <code class="sig">isPrototypeOf :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="join">
+  <h2>join <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join">mdn</a></small></h2>
+  <code class="sig">join :: [a] &rarr; "a"</code>
+  <p>Currently the only function that takes an array but not a string.</p>
+<pre class="prettyprint lang-js">join(" - ", [1, 2, 3]); // &rarr; "1 - 2 - 3"
+
+var joinWithDash = join(" - ");
+joinWithDash([1, 2, 3]); // &rarr; "1 - 2 - 3"
+</pre>
+</section>
+
+<section id="lastIndexOf">
+  <h2>lastIndexOf <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/lastIndexOf">mdn</a></small></h2>
+  <code class="sig">lastIndexOf :: a &rarr; a &rarr; int</code>
+<pre class="prettyprint lang-js">lastIndexOf( "o", "hello world!" ); // &rarr; 7
+
+lastIndexOf( 2, [1, 2, 3, 2, 4, 1, 0, 2, 4] ); // &rarr; 7
+</pre>
+</section>
+
+<section id="length">
+  <h2>length <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length">mdn</a></small></h2>
+  <code class="sig">length :: a &rarr; int</code>
+  <p>Returns the length of a string or array</p>
+<pre class="prettyprint lang-js">length( [1, 2, 3] ); // &rarr; 3
+
+length( "hello" ); // &rarr; 5</pre>
+</section>
+
+<section id="localCompare">
+  <h2>localCompare <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localCompare">mdn</a></small></h2>
+  <code class="sig">localCompare :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="match">
+  <h2>match <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match">mdn</a></small></h2>
+  <code class="sig">match :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="pop">
+  <h2>pop <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop">mdn</a></small></h2>
+  <code class="sig">pop :: a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+pop(a); // &rarr; 3
+a; // &rarr; [1, 2, 3] (a is unaltered)
+
+// Works for strings too
+pop("hello"); // &rarr; "o"</pre>
+</section>
+
+<section id="pop_">
+  <h2>pop_ <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop_">mdn</a></small></h2>
+  <code class="sig">pop_ :: a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+pop_(a); // &rarr; [1, 2]
+a; // &rarr; [1, 2, 3] (a is unaltered)
+
+pop_("hello"); // &rarr; "hell"</pre>
+</section>
+
+<section id="push">
+  <h2>push <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push">mdn</a></small></h2>
+  <code class="sig">push :: a &rarr; a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+push('z', a); // &rarr; [1, 2, 3, 'z']
+a; // &rarr; [1, 2, 3] (a is unaltered)
+
+push("oo", "hello"); // &rarr; "hellooo"</pre>
+</section>
+
+<section id="propertyIsEnumerable">
+  <h2>propertyIsEnumerable <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/propertyIsEnumerable">mdn</a></small></h2>
+  <code class="sig">propertyIsEnumerable :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="replace">
+  <h2>replace <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace">mdn</a></small></h2>
+  <code class="sig">replace :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="reverse">
+  <h2>reverse <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse">mdn</a></small></h2>
+  <code class="sig">reverse :: a &rarr; a</code>
+<pre class="prettyprint lang-js">reverse("hello"); // &rarr; "olleh"
+
+var a = [1, 2, 3]
+reverse(a); // &rarr; [3, 2, 1]
+a; // &rarr; [1, 2, 3] (a is unaltered)</pre>
+</section>
+
+<section id="search">
+  <h2>search <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/search">mdn</a></small></h2>
+  <code class="sig">search :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="shift">
+  <h2>shift <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift">mdn</a></small></h2>
+  <code class="sig">shift :: a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+shift(a); // &rarr; 1
+a; // &rarr; [1, 2, 3] (a is unaltered)
+
+shift("hello"); // &rarr; "h"</pre>
+</section>
+
+<section id="shift_">
+  <h2>shift_ <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift_">mdn</a></small></h2>
+  <code class="sig">shift_ :: a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+shift_(a); // &rarr; [2, 3]
+a; // &rarr; [1, 2, 3] (a is unaltered)
+
+shift_("hello"); // &rarr; "ello"</pre>
+</section>
+
+<section id="slice">
+  <h2>slice <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice">mdn</a></small></h2>
+  <code class="sig">slice :: int &rarr; int &rarr; a &rarr; a</code>
+<pre class="prettyprint lang-js">var a = [1, 2, 3];
+
+slice(1, 3, a); // &rarr; [2, 3]
+
+var getFirstTwo = slice(0, 2);
+getFirstTwo(a); // &rarr; [1, 2]
+
+slice( 1, 10, "hello world" ); // &rarr; "ello worl"</pre>
+</section>
+
+<section id="sort">
+  <h2>sort <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort">mdn</a></small></h2>
+  <code class="sig">sort :: a &rarr; a</code>
+<pre class="prettyprint lang-js">sort("hello"); // &rarr; "ehllo"
+
+sort(["Delta", "alpha", "CHARLIE", "bravo"]);
+// &rarr; ["CHARLIE", "Delta", "alpha", "bravo"]</pre>
+</section>
+
+<section id="splice">
+  <h2>splice <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice">mdn</a></small></h2>
+  <code class="sig">splice :: int &rarr; int &rarr; a &rarr; a</code>
+<pre class="prettyprint lang-js">splice(2, 3, "Hello world!"); &rarr; "He world!"
+
+splice(2, 3, ["zero", "one", "two", "three", "four", "five"]);
+// &rarr; ["zero", "one", "five"]
+</pre>
+</section>
+
+<section id="splice_">
+  <h2>splice_ <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice_">mdn</a></small></h2>
+  <code class="sig">splice_ :: int &rarr; int &rarr; a &rarr; a &rarr; a</code>
+<pre class="prettyprint lang-js">splice_(2, 3, "hi", ["zero", "one", "two", "three", "four", "five"]);
+// &rarr; ["zero", "one", "hi", "five"]
+
+splice_(0, 5, "What a wonderful", "Hello world!")
+// &rarr; "What a wonderful world!"
+</pre>
+</section>
+
+<section id="split">
+  <h2>split <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/split">mdn</a></small></h2>
+  <code class="sig">split :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="startsWith">
+  <h2>startsWith <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith">mdn</a></small></h2>
+  <code class="sig">startsWith :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="substr">
+  <h2>substr <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substr">mdn</a></small></h2>
+  <code class="sig">substr :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="substring">
+  <h2>substring <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring">mdn</a></small></h2>
+  <code class="sig">substring :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="test">
+  <h2>test <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/test">mdn</a></small></h2>
+  <code class="sig">test :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toExponential">
+  <h2>toExponential <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential">mdn</a></small></h2>
+  <code class="sig">toExponential :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toFixed">
+  <h2>toFixed <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed">mdn</a></small></h2>
+  <code class="sig">toFixed :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toLocaleLowerCase">
+  <h2>toLocaleLowerCase <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase">mdn</a></small></h2>
+  <code class="sig">toLocaleLowerCase :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toLocaleUpperCase">
+  <h2>toLocaleUpperCase <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase">mdn</a></small></h2>
+  <code class="sig">toLocaleUpperCase :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toPrecision">
+  <h2>toPrecision <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision">mdn</a></small></h2>
+  <code class="sig">toPrecision :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toString">
+  <h2>toString <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toString">mdn</a></small></h2>
+  <code class="sig">toString :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="toUpperCase">
+  <h2>toUpperCase <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase">mdn</a></small></h2>
+  <code class="sig">toUpperCase :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="trim">
+  <h2>trim <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim">mdn</a></small></h2>
+  <code class="sig">trim :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="trimLeft">
+  <h2>trimLeft <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trimLeft">mdn</a> <mark>non-standard</mark></small></h2>
+  <code class="sig">trimLeft :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="trimRight">
+  <h2>trimRight <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trimRight">mdn</a> <mark>non-standard</mark></small></h2>
+  <code class="sig">trimRight :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="unshift">
+  <h2>unshift <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift">mdn</a></small></h2>
+  <code class="sig">unshift :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+<section id="valueOf">
+  <h2>valueOf <small><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/valueOf">mdn</a></small></h2>
+  <code class="sig">valueOf :: </code>
+<pre class="prettyprint lang-js">// TODO - Have a look in the mdn documentation just above</pre>
+</section>
+
+
+
+
+  </div>
+
+<script>l = function(x) { return x; }</script>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+<script>
+  nav_items = {
+    filters : $('aside nav span'),
+    all : $('aside li'),
+    string : $('aside li.string'),
+    array  : $('aside li.array'),
+    number : $('aside li.number'),
+    object : $('aside li.object'),
+    regexp : $('aside li.regexp')
+  };
+  $('aside nav').on('click', function(e) {
+    key = $(e.target).data('show');
+    if( key ){
+      nav_items.all.hide();
+      nav_items[key].show(); 
+      nav_items.filters.removeClass('current');
+      $(e.target).addClass('current');
+    }
+  });
+</script>
+</body>
+</html>
