@@ -1,0 +1,644 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JS Cherries</title>
+    <!--  Snooping in the code? Enjoy. It's as simple as it can get. Why?
+          Because the site feels speedier and I like that, more so than looking
+          at yet another bootstrap skin... and hey look! It's responsive too!
+    -->
+    <style>
+      body{font-size:1.1em}
+      code{background:#ffd}
+      code.def{background:#dfd;font-weight:800}
+      body pre.prettyprint{border:none;border-left:3px solid #edd;padding:5px;background:#fff8f8}
+      body pre.prettyprint .com {color: #999}
+      body pre.prettyprint .kwd {color: #08f}
+      body pre.prettyprint .str {color: #c00}
+      body pre.prettyprint .lit {color: #c00}
+      small{display:block;color:#999;}
+      hr {margin:1em 0}
+      h2 {background:#fea}
+      .mono a {font-family:monospace}
+    </style>
+  </head>
+  <body>
+    <small style="float:right">By: <a href="http://gormcasper.com">Gorm Casper</a><br>18 Aug, 2013</small>
+    <h1>Cherries</h1>
+    <p>I often find myself needing a function like <code>map</code> or <code>filter</code>, but unable/unwilling to import an entire library like the famous <a href="http://lodash.com">Lodash</a> or <a href="http://underscorejs.org/">Underscore</a> (whichever you fancy). There can be many reasons for this, but my primary reason is usually that I am building a small plugin to handle some operation for someone, and it is entirely unreasonable of me to expect a client to important an entire library, five times the size of my little plugin, just so I can filter an array properly (or whatever else I need that library for).</p>
+    <p>So I often have to cherry pick functions from those libraries, but they are not built in a modular way internally. Functions inside the library are highly dependent on other functions in order to save bytes and speed. For instance you can't copy <code>map</code> over without also copying <code>each</code>. So instead, here are some functions that I wrote, that can all (save a few very obvious ones) be exported "as is" into other code. Change them, rename them, make them faster, do whatever you want with them. They are just a starting point, and a small building block for bigger things.</p>
+    <p>For this reason, I haven't added this "project" (seriously, it's just a file of code) to <a href="http://bower.io/">Bower</a> or any some such. It's not meant to be included as a full library (if that's what you need, then use another library), but just some code that you can search through and copy/paste the stuff you need, and pretend you wrote it yourself.</p>
+
+
+<h2>Examples</h2>
+<p>We all love examples. Here are some of how this is meant to be used.</p>
+<p>I consider <code>compose</code> and <code>autoCurry</code> (which is dependent on <code>curry</code>) to be cornerstones in coding, and would include them in any project. Both examples below reflect usage of them. As examples are, these are a bit contrived.</p>
+
+<h3 id="ex1">Example 1</h3>
+<p>Writing a small plugin, you need a function that flattens a list of lists. You know how to do this... sorta... but it'd be nice if someone else had already done it. So you find it in here and copy/paste it into your own project. No sweat.</p>
+<pre class="prettyprint">
+var flatten = function(xs) {
+  /* find the code in <a href="cherries.js">cherries.js</a> ... */
+};
+</pre>
+<p>And now you're flattening arrays all day long!</p>
+
+<h3 id="ex2">Example 2</h3>
+<p>Let's find the average age of a list of people that looks like this:</p>
+<pre class="prettyprint">
+var people = [
+  {name: 'Bob Roberts', age: 31, gender: 'm'},
+  {name: 'Julia Smith', age: 63, gender: 'f'},
+  {name: 'Ken Paulsen', age: 23, gender: 'm'},
+  {name: 'Lisa Erikson', age: 9, gender: 'f'}
+];
+</pre>
+<p>For this, we could use <code>pluck</code> and <code>mean</code>.
+<pre class="prettyprint">
+/* I assume compose and autoCurry is already available */
+var pluck = autoCurry( /* code defining pluck */ ),
+    mean  = /* code defining mean  */;
+</pre>
+<p>And we compose the function we need,</p>
+<p>Notice that since <code>pluck</code> is autoCurried, calling it with just one argument (it needs two) will return a function waiting for a list of objects (how convenient) that returns a list of whatever we plucked out (in this case the age).</p>
+<pre class="prettyprint">
+// Compose a function that first plucks out the age into a list, and then
+// takes the mean of that list
+var getMeanOfAges = compose(  mean,
+                              pluck('age')  );
+
+// Try out our function
+getMeanOfAges(people)   // 31.5
+</pre>
+<p>Of course, if you only need <code>pluck</code> once, and to do only the above, then you'd probably not include <code>autoCurry</code> and <code>pluck</code>, but rather just define your own function and use that instead. Something like this:</p>
+<pre class="prettyprint">
+// Quick adaptation of the `pluck` within cherries
+var pluckAge = function(xs){
+  var result = [], i = -1, len = xs.length;
+  while (++i &lt; len) {
+    result.push(xs[i].age)
+  }
+  return result;
+};
+
+var getMeanOfAges = compose(mean, pluckAge);
+</pre>
+
+<h3 id="ex3">Example 3</h3>
+<p>You're writing a little plugin for a client and you need an easy way to pull some data representing people out that comes in a list form, you want an object, and you want to pick out certain data.</p>
+<p>Here's a sample list we could get from a server or whatever.</p>
+<pre class="prettyprint">
+var people = [
+  ['Bob Roberts', 31, 'm'],
+  ['Julia Smith', 63, 'f'],
+  ['Ken Paulsen', 23, 'm'],
+  ['Lisa Erikson', 9, 'f']
+];
+</pre>
+<p>First you pick out the functions you need from this library and define them using <code>autoCurry</code>
+<pre class="prettyprint lang-js">
+/* compose and autoCurry assumed */
+var pick        = autoCurry( /* code defining pick       */ ),
+    map         = autoCurry( /* code defining map        */ ),
+    listsToObj  = autoCurry( /* code defining listsToObj */ );
+</pre>
+<p>Then we build a function that turns <code>people</code> into an object and gives us a list of of whatever we need</p>
+<p>Like in the previous example, the functions are autoCurried, so calling them with less arguments than they expect (<code>map</code>, <code>pick</code>, and <code>listsToObj</code> each need two arguments, we're calling them with one) means we get a function back that is waiting for the last argument.</p>
+<pre class="prettyprint">
+var getNameAndAgeOf = compose(  map( pick(['name', 'age']) ),
+                                map( listsToObj(['name', 'age', 'gender']) ) );
+</pre>
+<p>Calling this function on <code>people</code>...
+<pre class="prettyprint">
+getNameAndAgeOf(people)   // [{"name":"Bob Roberts","age":31}, ... ]
+</pre>
+<p>We can make it a bit more general use actually...</p>
+<pre class="prettyprint">
+var getThisOfThat = function(xs) {
+  return compose( map( pick(xs) ),
+                  map( listsToObj(['name', 'age', 'gender']) ) );
+};
+
+// Make a function that pulls out name and gender
+var getNameAndGender = getThisOfThat(['name', 'gender'])
+
+// Try out our new function
+getNameAndGender(people)     // [{"name":"Bob Roberts","gender":"m"}, ... ]
+</pre>
+
+<hr>
+
+<p>See the <a href="#lt">examples at <code>lt</code></a> for some more examples of usage.</p>
+
+
+
+
+<h2>Functions</h2>
+<p>Here's a list of each of the functions currently defined. Remember, <strong>dig into the code and pull out the bits you need</strong>. Don't just import everything; there are better libraries for that.</p>
+
+<p>
+  Jump to:
+  <span class="mono">
+  <a href="#id">id</a>,
+  <a href="#isType">isType</a>,
+  <a href="#replicate">replicate</a>,
+  <a href="#dot">dot</a>,
+  <a href="#pluck">pluck</a>,
+  <a href="#each">each</a>,
+  <a href="#map">map</a>,
+  <a href="#filter">filter</a>,
+  <a href="#reject">reject</a>,
+  <a href="#partition">partition</a>,
+  <a href="#find">find</a>,
+  <a href="#head">head</a>,
+  <a href="#tail">tail</a>,
+  <a href="#last">last</a>,
+  <a href="#initial">initial</a>,
+  <a href="#take">take</a>,
+  <a href="#drop">drop</a>,
+  <a href="#takeWhile">takeWhile</a>,
+  <a href="#dropWhile">dropWhile</a>,
+  <a href="#span">span</a>,
+  <a href="#breakList">breakList</a>,
+  <a href="#empty">empty</a>,
+  <a href="#reverse">reverse</a>,
+  <a href="#foldl">foldl</a>,
+  <a href="#foldr">foldr</a>,
+  <a href="#concat">concat</a>,
+  <a href="#flatten">flatten</a>,
+  <a href="#any">any</a>,
+  <a href="#all">all</a>,
+  <a href="#sort">sort</a>,
+  <a href="#sortBy">sortBy</a>,
+  <a href="#sum">sum</a>,
+  <a href="#product">product</a>,
+  <a href="#even">even</a>,
+  <a href="#odd">odd</a>,
+  <a href="#lt">lt</a>,
+  <a href="#gt">gt</a>,
+  <a href="#eq">eq</a>,
+  <a href="#lteq">lteq</a>,
+  <a href="#gteq">gteq</a>,
+  <a href="#mean">mean</a>,
+  <a href="#maximum">maximum</a>,
+  <a href="#minimum">minimum</a>,
+  <a href="#zip">zip</a>,
+  <a href="#zipWith">zipWith</a>,
+  <a href="#keys">keys</a>,
+  <a href="#values">values</a>,
+  <a href="#pairsToObj">pairsToObj</a>,
+  <a href="#objToPairs">objToPairs</a>,
+  <a href="#listsToObj">listsToObj</a>,
+  <a href="#objToLists">objToLists</a>,
+  <a href="#extend">extend</a>,
+  <a href="#extendAll">extendAll</a>,
+  <a href="#pick">pick</a>,
+  <a href="#omit">omit</a>,
+  <a href="#compose">compose</a>,
+  <a href="#curry">curry</a>,
+  <a href="#autoCurry">autoCurry</a>.
+  </span>
+</p>
+
+<hr>
+<code class="def" id="id">id</code>, kind of does nothing.
+<small>a &rarr; a</small>
+<pre class="prettyprint">
+id('foo')   // 'foo'
+id([])      // []
+</pre>
+
+<hr>
+<code class="def" id="isType">isType</code>. You can check if a variable has a certain type with this.
+<small>"a" &rarr; a &rarr; Boolean</small>
+<pre class="prettyprint">
+isType('Undefined', undefined)  // true
+isType('Boolean', false)        // true
+isType('Number', 3)             // true
+isType('String', 'foo')         // true
+isType('Object', {})            // true
+isType('Array', [])             // true
+</pre>
+
+<hr>
+<code class="def" id="replicate">replicate</code>. Creates an array with however many items of whatever you want.
+<small>Number &rarr; a &rarr; [a]</small>
+<pre class="prettyprint">
+replicate(3, 'foo')   // ['foo', 'foo', 'foo']
+replicate(2, true)    // [true, true]
+</pre>
+
+<hr>
+<code class="def" id="dot">dot</code>. Gets a property of the passed in object.
+<small>"a" &rarr; {a:b} &rarr; b</small>
+<pre class="prettyprint">
+dot('age', {name: 'Simon', age: 45})   // 45
+dot('status', {status: false})         // false
+</pre>
+
+<hr>
+<code class="def" id="pluck">pluck</code>. Does the same as <code>dot</code>, but for an array of objects.
+<small>"a" &rarr; [{a:b}] &rarr; [b]</small>
+<pre class="prettyprint">
+pluck('age', [{name: 'Simon', age: 45}, {name: 'Bob', age: 12}])    // [45, 12]
+pluck('status', [{status: false}])                                  // [false]
+</pre>
+
+<hr>
+<code class="def" id="each">each</code>. Your general <code>each</code> or <code>forEach</code> function. Nothing spectacular.
+Notice, that as it is, it will default to the browser's native <code>forEach</code> if it exists, in which case it will return <code>undefined</code> and not the array you passed in.
+<small>Function &rarr; a &rarr; a</small>
+<pre class="prettyprint">
+each(alert, [1, 2, 3])          // will call alert on each number
+each(alert, {one: 1, two: 2})   // once more :(
+</pre>
+
+<hr>
+<code class="def" id="map">map</code>. A map function. Like <code>each</code> it works on both arrays and objects (their values).
+<small>Function &rarr; a &rarr; a</small>
+<pre class="prettyprint">
+map(function(x){ return x+1 }, [1, 2, 3])           // [2, 3, 4]
+map(function(x){ return x+1 }, {one: 1, two: 2})    // {one: 2, two: 3}
+</pre>
+
+<hr>
+<code class="def" id="filter">filter</code>.
+<small>Function &rarr; a &rarr; a</small>
+<pre class="prettyprint">
+function even(x) { return x%2 === 0 }
+filter(even, [1, 2, 3, 4])                  // [2, 4]
+filter(even, {one: 1, two: 2, three: 3})    // {two: 2}
+</pre>
+
+<hr>
+<code class="def" id="reject">reject</code>. Opposite <code>filter</code>.
+<small>Function &rarr; a &rarr; a</small>
+<pre class="prettyprint">
+reject(even, [1, 2, 3, 4])                  // [1, 3]
+reject(even, {one: 1, two: 2, three: 3})    // {one: 1, three: 3}
+</pre>
+
+<hr>
+<code class="def" id="partition">partition</code>. Kind of like <code>filter</code> and <code>reject</code> in one. It returns an array with two items: first one of filtered items, second of reject items.
+<small>Fucntion &rarr; a &rarr; [a, a]</small>
+<pre class="prettyprint">
+partition(even, [1, 2, 3, 4])                   // [[2, 4], [1, 3]]
+partition(even, {one: 1, two: 2, three: 3})     // [{two: 2}, {one: 1, three: 3}]
+</pre>
+
+<hr>
+<code class="def" id="find">find</code>. Finds the first value that matches your function and returns that.
+<small>Function &rarr; a &rarr; a</small>
+<pre class="prettyprint">
+find(even, [1, 2, 3, 4])                  // 2
+find(even, {one: 1, two: 2, three: 3})    // 2
+</pre>
+
+<hr>
+<code class="def" id="head">head</code>. Returns the "head" or first value of a list.
+<small>[a] &rarr; a</small>
+<pre class="prettyprint">head([1, 2, 3, 4])    // 1</pre>
+
+<hr>
+<code class="def" id="tail">tail</code>. Returns the "tail" or everything but first value of a list.
+<small>[a] &rarr; [a]</small>
+<pre class="prettyprint">tail([1, 2, 3, 4])    // [2, 3, 4]</pre>
+
+<hr>
+<code class="def" id="last">last</code>. Returns the "last" or last value of a list.
+<small>[a] &rarr; a</small>
+<pre class="prettyprint">last([1, 2, 3, 4])    // 4</pre>
+
+<hr>
+<code class="def" id="initial">initial</code>. Returns the "initial" part of a list, or everything but the last value.
+<small>[a] &rarr; a</small>
+<pre class="prettyprint">initial([1, 2, 3, 4])    // [1, 2, 3]</pre>
+
+<hr>
+<code class="def" id="take">take</code>. Takes <code>n</code> number of values from a list.
+<small>Number &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">take(2, [1, 2, 3, 4])    // [1, 2]</pre>
+
+<hr>
+<code class="def" id="drop">drop</code>. Drops <code>n</code> number of values from a list and returns the rest.
+<small>Number &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">drop(2, [1, 2, 3, 4])    // [3, 4]</pre>
+
+<hr>
+<code class="def" id="takeWhile">takeWhile</code>. Copies your array until the values no longer returns truthy from your applied function.
+<small>Function &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">takeWhile(even, [2, 4, 0, 3, 4, 2])      // [2, 4, 0]</pre>
+
+<hr>
+<code class="def" id="dropWhile">dropWhile</code>. Drops the values of a list until they no longer return truthy from your function. From that, it copies your array.
+<small>Function &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">dropWhile(even, [2, 4, 0, 3, 4, 2])      // [3, 4, 2]</pre>
+
+<hr>
+<code class="def" id="span">span</code> is to <code>takeWhile</code> and <code>dropWhile</code> what <code>partition</code> is to <code>filter</code> and <code>reject</code>.
+<small>Function &rarr; [a] &rarr; [[a], [a]]</small>
+<pre class="prettyprint">span(even, [2, 4, 0, 3, 4, 2])       // [[2, 4, 0], [3, 4, 2]]</pre>
+
+<hr>
+<code class="def" id="breakList">breakList</code> breaks a list into two where the function returns truthy.
+<small>Function &rarr; [a] &rarr; [[a], [a]]</small>
+<pre class="prettyprint">breakList(even, [1, 3, 2, 4, 0, 3])       // [[1, 3], [2, 4, 0, 3]]</pre>
+
+<hr>
+<code class="def" id="empty">empty</code> checks if an array or object is empty.
+<small>a &rarr; Boolean</small>
+<pre class="prettyprint">
+empty([])           // true
+empty({})           // true
+empty({one: 1})     // false
+</pre>
+
+<hr>
+<code class="def" id="reverse">reverse</code> returns a reversed shallow copy of the list.
+<small>[a] &rarr; [a]</small>
+<pre class="prettyprint">reverse([1, 2, 3])   // [3, 2, 1]</pre>
+
+<hr>
+<code class="def" id="foldl">foldl</code> is your standard <code>reduce</code> function.
+<small>Function &rarr; a &rarr; [a] &rarr; a</small>
+<pre class="prettyprint">
+function add(x, y) { return x + y }
+foldl(add, 7, [1, 2, 3])      // 13
+</pre>
+
+<hr>
+<code class="def" id="foldr">foldr</code> is your standard <code>reduceRight</code> function.
+<small>Function &rarr; a &rarr; [a] &rarr; a</small>
+<pre class="prettyprint">
+function subtract(x, y) { return x - y }
+foldl(subtract, 7, [1, 2, 3])      // 1
+</pre>
+
+<hr>
+<code class="def" id="concat">concat</code> takes a list of lists and concatenates them. Notice it only does this one level down.
+<small>[[a],[a]] &rarr; [a, a]</small>
+<pre class="prettyprint">concat([[1, 2, 3], ['a', 'b']])      // [1, 2, 3, 'a', 'b']</pre>
+
+<hr>
+<code class="def" id="flatten">flatten</code> takes a list of lists and flattens them.
+<small>[[a]] &rarr; [a]</small>
+<pre class="prettyprint">flatten([ 1, [ [2], 3 ], [4, [[5]]], [{one: 1}, "hello"] ])      // [1, 2, 3, 4, 5, {one: 1}, "hello"]</pre>
+
+<hr>
+<code class="def" id="any">any</code> can tell you if any values in a list returns truthy from a function.
+<small>Function &rarr; [a] &rarr; Boolean</small>
+<pre class="prettyprint">
+any(even, [1, 2, 3])      // true
+any(even, [1, 3, 77])     // false
+</pre>
+
+<hr>
+<code class="def" id="all">all</code> can tell you if all values in a list returns truthy from a function.
+<small>Function &rarr; [a] &rarr; Boolean</small>
+<pre class="prettyprint">
+all(even, [1, 2, 3])      // false
+all(odd, [1, 3, 77])      // true
+</pre>
+
+<hr>
+<code class="def" id="sort">sort</code> sorts an array of numbers. (Have a look at the implementation, it is highly subjective what you will expect this to do).
+<small>[Number] &rarr; [Number]</small>
+<pre class="prettyprint">sort([2, 12, 1])       // [1, 2, 12]</pre>
+
+<hr>
+<code class="def" id="sortBy">sortBy</code> sorts an array according to a provided function.
+<small>Function &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">sortBy(function(a, b) { return b-a }, [2, 12, 1])       // [12, 2, 1]</pre>
+
+<hr>
+<code class="def" id="sum">sum</code>. Sums up numbers in an array.
+<small>[Number] &rarr; Number</small>
+<pre class="prettyprint">sum([3, 4, 5])           // 12</pre>
+
+<hr>
+<code class="def" id="product">product</code>.
+<small>[Number] &rarr; Number</small>
+<pre class="prettyprint">product([3, 4, 5])           // 60</pre>
+
+<hr>
+<code class="def" id="even">even</code>. Checks if a number is even.
+<small>Number &rarr; Boolean</small>
+<pre class="prettyprint">even(2)      // true</pre>
+
+<hr>
+<code class="def" id="odd">odd</code>. Checks if a number is odd.
+<small>Number &rarr; Boolean</small>
+<pre class="prettyprint">odd(3)      // true</pre>
+
+<hr>
+<code class="def" id="lt">lt</code>. "Less than". Notice that the arguments are in "reversed" order so they make more sense when curried.
+<small>Number &rarr; Number &rarr; Boolean</small>
+<pre class="prettyprint">
+lt(3, 2)                                  // true
+
+// Curried
+var lt3 = curry(lt, 3);
+lt3(2)                                    // true
+filter(lt3, [1, 5, 3, 9, 0, 2, 4, 2])     // [1, 0, 2, 2]
+
+// Or better yet, redefine `lt` with autoCurry for better reuse
+lt = autoCurry(lt);
+listOfNum = [1, 5, 3, 9, 0, 2, 4, 2];     // Just because we will need it
+filter(lt(3), listOfNum)                  // [1, 0, 2, 2]
+filter(lt(5), listOfNum)                  // [1, 3, 0, 2, 4, 2]
+
+
+// Let's go crazy
+var filterLt = autoCurry(function(n, xs) {
+  return filter(lt(n), xs);               // assuming `lt` is still autoCurried
+});
+
+// Here we call `filterLt` twice with one argument each
+filterLt(3)(listOfNum)                    // [1, 0, 2, 2]
+
+// Here we call `filterLt` once with two arguments
+filterLt(5, listOfNum)                    // [1, 3, 0, 2, 4, 2]
+</pre>
+
+<hr>
+<code class="def" id="gt">gt</code>. "Greater than"
+<small>Number &rarr; Number &rarr; Boolean</small>
+<pre class="prettyprint">gt(3,4)      // true</pre>
+
+<hr>
+<code class="def" id="eq">eq</code>. "Equal" (This actually compares any two values using <code>===</code>)
+<small>Number &rarr; Number &rarr; Boolean</small>
+<pre class="prettyprint">eq(3,3)      // true</pre>
+
+<hr>
+<code class="def" id="lteq">lteq</code>. "Less than, Equal" or <code>&lt;=</code>
+<small>Number &rarr; Number &rarr; Boolean</small>
+<pre class="prettyprint">lteq(3,2)      // true</pre>
+
+<hr>
+<code class="def" id="gteq">gteq</code>. "Greather than, Equal" or <code>&gt;=</code>
+<small>Number &rarr; Number &rarr; Boolean</small>
+<pre class="prettyprint">gteq(3,3)      // true</pre>
+
+<hr>
+<code class="def" id="mean">mean</code>. Finds the mean of the numbers in a list.
+<small>[Number] &rarr; Number</small>
+<pre class="prettyprint">mean([1, 2, 3, 4])     // 2.5</pre>
+
+<hr>
+<code class="def" id="maximum">maximum</code> finds the highest number in a list.
+<small>[Number] &rarr; Number</small>
+<pre class="prettyprint">maximum([6, 7, 2, 3])     // 7</pre>
+
+<hr>
+<code class="def" id="minimum">minimum</code> finds the lowest number in a list.
+<small>[Number] &rarr; Number</small>
+<pre class="prettyprint">minimum([6, 7, 2, 3])     // 2</pre>
+
+<hr>
+<code class="def" id="zip">zip</code> takes two arrays and "zips" them together.
+<small>[a] &rarr; [b] &rarr; [[a, b]]</small>
+<pre class="prettyprint">zip(['a', 'b', 'c'], [1, 2, 3])    // [['a', 1], ['b', 2], ['c', 3]]</pre>
+
+<hr>
+<code class="def" id="zipWith">zipWith</code> takes a function and two arrays and zips them together using that function.
+<small>Function &rarr; [a] &rarr; [a] &rarr; [a]</small>
+<pre class="prettyprint">
+function add(x, y) { return x+y }
+zipWith( add, [1, 2, 3], [7, 8, 9])     // [8, 10, 12]
+</pre>
+
+<hr>
+<code class="def" id="keys">keys</code> returns an array with the keys of an object.
+<small>{a:b} &rarr; [a]</small>
+<pre class="prettyprint">keys({one: 1, two: 2, three: 3})     // ['one', 'two', 'three']</pre>
+
+<hr>
+<code class="def" id="values">values</code> returns an array with the values of an object.
+<small>{a:b} &rarr; [b]</small>
+<pre class="prettyprint">values({one: 1, two: 2, three: 3})     // [1, 2, 3]</pre>
+
+<hr>
+<code class="def" id="pairsToObj">pairsToObj</code>. Takes an array of arrays with two values and turns them into an object.
+<small>[[a, b]] &rarr; {a:b}</small>
+<pre class="prettyprint">pairsToObj([['a', 1], ['b', 2], ['c', 3]])     // {a: 1, b: 2, c: 3}</pre>
+
+<hr>
+<code class="def" id="objToPairs">objToPairs</code> does the opposite as above.
+<small>{a:b} &rarr; [[a, b]]</small>
+<pre class="prettyprint">objToPairs({a: 1, b: 2, c: 3})     // [['a', 1], ['b', 2], ['c', 3]]</pre>
+
+<hr>
+<code class="def" id="listsToObj">listsToObj</code> takes two lists and returns an object with one arrays' values as keys and the other as the values.
+<small>[a] &rarr; [b] &rarr; {a:b}</small>
+<pre class="prettyprint">listsToObj(['a', 'b', 'c'], [1, 2, 3])     // {a: 1, b: 2, c: 3}</pre>
+
+<hr>
+<code class="def" id="objToLists">objToLists</code> does the opposite as above.
+<small>{a:b} &rarr; [[a], [b]]</small>
+<pre class="prettyprint">objToLists({a: 1, b: 2, c: 3})     // [['a', 'b', 'c'], [1, 2, 3]]</pre>
+
+<hr>
+<code class="def" id="extend">extend</code> takes two objects and "extends" them to a shallow clone.
+Because it takes a fixed number of arguments, it is easy to curry, whereas <code>extendAll</code> is a bit tricky.
+<small>{a} &rarr; {a} &rarr; {a}</small>
+<pre class="prettyprint">extend({one: 1, two: 2, three: 3}, {three: 33, four: 44})    // {one: 1, two: 2, three: 33, four: 44}</pre>
+
+<hr>
+<code class="def" id="extendAll">extendAll</code> takes two or more objects and returns one object with the keys and values from all the others. (The copy is shallow)
+Because it takes a variable number of arguments, this function is a bit tricky to curry.
+<small>{a} &rarr; {a} &rarr; ... &rarr; {a}</small>
+<pre class="prettyprint">extendAll({one: 1, two: 2, three: 3}, {three: 33, four: 44}, {four: 'f', five: 'g'})
+// {one: 1, two: 2, three: 33, four: 'f', five: 'g'}</pre>
+
+<hr>
+<code class="def" id="pick">pick</code> returns an object with the keys you asked for.
+<small>[a] &rarr; {a} &rarr; {a}</small>
+<pre class="prettyprint">pick(['one', 'three'], {one: 1, two: 2, three: 3})     // {one: 1, three: 3}</pre>
+
+<hr>
+<code class="def" id="omit">omit</code>. Opposite <code>pick</code>.
+<small>[a] &rarr; {a} &rarr; {a}</small>
+<pre class="prettyprint">omit(['one', 'three'], {one: 1, two: 2, three: 3})     // {two: 2}</pre>
+
+<hr>
+<code class="def" id="compose">compose</code>. Composes functions together. Takes an optional number of arguments, so this can't be curried.
+Perhaps ironically, this function becomes a lot more powerful when other functions are curried.
+<small>Function &rarr; Function &rarr; ... &rarr; Function</small>
+<pre class="prettyprint">
+function getName(o) { return o['name'] }
+var alertName = compose(alert, getName)
+alertName({name: 'Simon', age: 45})     // alerts 'Simon'
+
+// If `dot` is autoCurried (dot = autoCurry(dot);) then
+var alertName2 = compose(alert, dot('name'));
+alertName2({name: 'Simon', age: 45})    // alerts 'Simon'
+</pre>
+
+<hr>
+<code class="def" id="curry">curry</code>. Returns a curried version of a function. This is not really meant to be used as is, but rather <code>autoCurry</code> is dependent on it.
+<small>Function &rarr; a &rarr; ... &rarr; Function</small>
+<pre class="prettyprint">
+function add(x, y) { return x+y }
+var add1 = curry(add, 1)
+add1(2)                             // 3
+add1(5)                             // 6
+</pre>
+
+<hr>
+<code class="def" id="autoCurry">autoCurry</code>. Takes a function and an optional number, and returns a curried version of that function. The number, if applied, tells <code>autoCurry</code> how many arguments it needs to be fully applied. (if not applied it will deduct it using <code>fn.length</code>.
+I personally define almost all my function inside this function.
+<small>Function &rarr; (Number &rarr;) Function</small>
+<pre class="prettyprint">
+var cAdder = autoCurry( function(x, y) { return x+y } );
+
+var add1 = cAdder(1);
+add1(2)                             // 3
+add1(5)                             // 6
+
+var add5 = cAdder(5);
+add5(2)                             // 7
+add5(5)                             // 10
+</pre>
+
+<hr>
+<code class="def" id="applyl">applyl</code>. Takes a function and a list of arguments, and returns a function that waits for the last arguments. This function is a bit like <code>curry</code>, except curry will wait for all arguments to arrive, while this will run the function next time called, no matter what
+<small>Function &rarr; [a] &rarr; Function</small>
+<pre class="prettyprint">
+var calc = function(x, y, z) { return (x+y)*z };
+var times3 = applyl(calc, [1, 2]);
+
+times3(4)   // 12
+times3(7)   // 21
+times3()    // NaN
+
+
+var isBool = applyl(isType, ['Boolean']);
+
+isBool(false)     // true
+isBool('Hello')   // false
+</pre>
+
+<hr>
+<code class="def" id="applyr">applyr</code>. Takes a function and a list of arguments, and returns a function that waits for the "first" arguments.
+<small>Function &rarr; [a] &rarr; Function</small>
+<pre class="prettyprint">
+var calc = function(x, y, z) { return (x+y)*z };
+var add1AndMultiplyBy2 = applyr(calc, [1, 2]);
+
+add1AndMultiplyBy2(3)   // 8
+add1AndMultiplyBy2(21)  // 44
+</pre>
+
+
+
+
+
+
+
+    <script src="cherries.js"></script>
+    <script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+
+  </body>
+</html>
