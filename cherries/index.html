@@ -25,21 +25,23 @@
   </head>
   <body>
     <small style="float:right">By: <a href="http://gormcasper.com">Gorm Casper</a><br>18 Aug, 2013</small>
-    <h1>Cherries</h1>
+    <h1>Cherries &Rarr; <a href="https://github.com/casperin/cherries/">on github</a></h1>
     <p>I often find myself needing a function like <code>map</code> or <code>filter</code>, but unable/unwilling to import an entire library like the famous <a href="http://lodash.com">Lodash</a> or <a href="http://underscorejs.org/">Underscore</a> (whichever you fancy). There can be many reasons for this, but my primary reason is usually that I am building a small plugin to handle some operation for someone, and it is entirely unreasonable of me to expect a client to important an entire library, five times the size of my little plugin, just so I can filter an array properly (or whatever else I need that library for).</p>
     <p>So I often have to cherry pick functions from those libraries, but they are not built in a modular way internally. Functions inside the library are highly dependent on other functions in order to save bytes and speed. For instance you can't copy <code>map</code> over without also copying <code>each</code>. So instead, here are some functions that I wrote, that can all (save a few very obvious ones) be exported "as is" into other code. Change them, rename them, make them faster, do whatever you want with them. They are just a starting point, and a small building block for bigger things.</p>
     <p>For this reason, I haven't added this "project" (seriously, it's just a file of code) to <a href="http://bower.io/">Bower</a> or any some such. It's not meant to be included as a full library (if that's what you need, then use another library), but just some code that you can search through and copy/paste the stuff you need, and pretend you wrote it yourself.</p>
 
+    <p><strong><mark>Important:</mark></strong> Since this is <em>not</em> a library meant to be included in any project as is, I will (most likely) at any point in time move things around, change implementations and/or functionality, and even names of functions.</p>
+
 
 <h2>Examples</h2>
 <p>We all love examples. Here are some of how this is meant to be used.</p>
-<p>I consider <code>compose</code> and <code>autoCurry</code> (which is dependent on <code>curry</code>) to be cornerstones in coding, and would include them in any project. Both examples below reflect usage of them. As examples are, these are a bit contrived.</p>
+<p>I consider <code>compose</code> and <code>autoCurry</code> (which is dependent on <code>curry</code>) to be cornerstones in coding, and would include them in any project. Example 2 and 3 below reflect usage of them. As examples often are, these are a bit contrived.</p>
 
 <h3 id="ex1">Example 1</h3>
 <p>Writing a small plugin, you need a function that flattens a list of lists. You know how to do this... sorta... but it'd be nice if someone else had already done it. So you find it in here and copy/paste it into your own project. No sweat.</p>
 <pre class="prettyprint">
 var flatten = function(xs) {
-  /* find the code in <a href="cherries.js">cherries.js</a> ... */
+  /* find the code in <a href="https://github.com/casperin/cherries/blob/master/cherries.js">cherries.js</a> ... */
 };
 </pre>
 <p>And now you're flattening arrays all day long!</p>
