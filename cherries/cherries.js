@@ -1,6 +1,6 @@
 "use strict";
 
-id = function(x){ return x },
+var id = function(x){ return x },
 
 
 isType = function(s, x){
