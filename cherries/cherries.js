@@ -437,7 +437,6 @@ omit = function(xs, o){
 
 
 
-// Functions
 
 // can't curry this :(
 compose = function() {
