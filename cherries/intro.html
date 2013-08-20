@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Introduction to using compose and autoCurry</title>
+    <!--  Snooping in the code? Enjoy. It&rsquo;s as simple as it can get. Why?
+          Because the site feels speedier and I like that, more so than looking
+          at yet another bootstrap skin... and hey look! It's responsive too!
+    -->
+    <style>
+      body{font-size:1.1em}
+      code{background:#ffd}
+      code.def{background:#dfd;font-weight:800}
+      body pre.prettyprint{border:none;border-left:3px solid #edd;padding:5px;background:#fff8f8;line-height:1.5}
+      body pre.prettyprint .com {color: #999}
+      body pre.prettyprint .kwd {color: #08f}
+      body pre.prettyprint .str {color: #c00}
+      body pre.prettyprint .lit {color: #c00}
+      small{display:block;color:#999}
+      hr {margin:1em 0}
+      h2 {background:#fea}
+      .mono a {font-family:monospace}
+    </style>
+    <script src="cherries.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.1/underscore-min.js"></script>
+    <script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+
+  </head>
+  <body>
+<small style="float:right">By: <a href="http://gormcasper.com">Gorm Casper</a><br>19 Aug, 2013</small>
+<h1>Introduction to using compose and autoCurry</h1>
+<p>Here&rsquo;s a small introduction to why and how to use <code>compose</code> and <code>autoCurry</code> in your code.</p>
+<p>Throughout this, I will assume you have basic understanding of how the functions found in <a href="http://underscorejs.org">Underscore</a> works and how to use them.</p>
+
+<p>Before we begin, open your console and play along. Write this: <code>lt(3,2)</code> and hit enter to check if it&rsquo;s working. It should <code>true</code> and not complain that &ldquo;lt&rdquo; is undefined.</p>
+<p>I included a small library with some functions that we will be using. Here is <a href="http://casperin.github.io/cherries/">some documentation</a> in case you need it.</p>
+<p>I have also included Underscore which as you know is accessed through <code>_</code>, like <code>_.map( ... )</code>. Since I&rsquo;m using cdnjs it&rsquo;s a minified version of underscore, but basically you can type <code>_.map</code> to get underscore&rsquo;s version of map, and just <code>map</code> to get mine.</p>
+<p>I suggest docking the console to the right of the browser window, but that&rsquo;s of course entirely up to you.</p>
+
+<h2>autoCurry</h2>
+<p>Let&rsquo;s first talk currying, and why it&rsquo;s helpful to you. First we will define a simple function (I already did this for you):
+<pre class="prettyprint">var add = function(x, y) { return x + y };</pre>
+<script>var add = function(x, y) { return x + y };</script>
+<p>We can call it: <code>add(2, 4)</code> and get back <code>6</code>, nothing interesting. But what if we call it with just one argument? Like this: <code>add(2)</code>. Well, we get back <code>NaN</code> because it will try to add together <code>2</code> and <code>undefined</code> Useless. Why doesn&rsquo;t it just return a function that waits for the last parameter instead? Then we could do nice stuff like this:</p>
+<pre class="prettyprint">
+var addOne = add(1);
+
+// and then use it over and over
+addOne(2); // 3
+addOne(5); // 6
+
+typeof addOne;  // "function"
+</pre>
+<p>That&rsquo;s exactly what <code>autoCurry</code> does. Let&rsquo;s try it.
+<script>var cAdd = autoCurry(add);</script>
+<pre class="prettyprint">
+var cAdd = autoCurry(add);  // already did this for you
+
+// and now we can use `cAdd` as above.
+var addTwo = cAdd(2);
+addTwo(3);  // 5
+</pre>
+<p>Before I tell you why this is so interesting, let&rsquo;s just quickly go over cases where a function takes more than two arguments. Actually, screw that. Do it yourself. Here&rsquo;s a function that I defined for you to play with:</p>
+<script>var addXYZ = autoCurry( function(x, y, z) { return x+y+z } );</script>
+<pre class="prettyprint">
+var addXYZ = autoCurry(function(x, y, z) {
+  return x+y+z;
+});
+</pre>
+<p>Basically it will return a function until all arguments are there. When it has its three arguments it will run the function and return the result. That&rsquo;s it.</p>
+
+<h4>Why this is useful</h4>
+<p>Let me show you by example. We have a list of numbers <code>list = [1, 2, 3]</code>, that we wish to filter so we have only numbers that are less than 3. Great! Let&rsquo;s do it the &ldquo;normal&rdquo; way with underscore:</p>
+<pre class="prettyprint">
+var list = [1, 2, 3];
+_.filter(list, function(x){ return x < 3; });   // [1, 2]
+</pre>
+<p>Sweet. Nothing new. Let&rsquo;s abstract things just a tiny bit. Maybe we want to reuse the &ldquo;less than three&rdquo; function, so we pull that out.</p>
+<p>Notice the characteristics of the function we use to filter: It takes one argument, and it returns a boolean.</p>
+<pre class="prettyprint">
+var list = [1, 2, 3];
+var lt3 = function(x){ return x < 3; };
+_.filter(list, lt3);    // [1, 2]
+</pre>
+<p>But we are not quite there yet. What happened to <code>autoCurry</code>? Well, how about this?</p>
+<pre class="prettyprint">
+var list = [1, 2, 3];
+var lessThan = autoCurry(function(y, x){ return x < y; });
+_.filter(list, lessThan(3));    // [1, 2]
+</pre>
+<p>Now we can use our &ldquo;lessThan&rdquo; function over and over again. What&rsquo;s happening, is that we are applying one argument to our function (that takes two) and in return we get a function waiting for its last argument before it returns our boolean used to filter the list.</p>
+<p>That&rsquo;s one reason why functional programming has so many standard functions already defined. If I, as a programmer on a project, have to define petty little functions like &ldquo;lessThan&rdquo;, then that kind of defeats the purpose. Not quite, but it&rsquo;s a valid point, hence many standard functions are already defined and curried:</p>
+<pre class="prettyprint">
+var list = [1, 2, 3];
+_.filter(list, lt(3))   // [1, 2]
+</pre>
+<p>It reads like this: &ldquo;filter the list for values less than 3&rdquo;. Neat.</p>
+
+
+
+<h3>Flippping the arguments</h3>
+<p>You may have noticed this already, but the arguments are often &ldquo;flipped&rdquo; from what you&rsquo;re used to, when the function is curried. Let&rsquo;s continue with our <code>lt</code> function as an example. It takes two numbers, compares them and returns a boolean. It sort of runs a check on a single number: asking &ldquo;is <em>this</em> smaller than <em>that</em>?&rdquo; And with currying, we can suddenly predefine the <em>that</em>. I personally think of it as setting up the function so it is ready to take its single argument and return its single return value (whether it be a boolean, a new list, or whatever).</p>
+<p>This is the reason we need the <em>that</em> before the <em>this</em>. I&rsquo;ll try my luck with a little diagram. Since &ldquo;this&rdquo; is a keyword and I don&rsquo;t want to confuse you more than I already have, I&rsquo;ll write <em>tihs</em> instead.</p>
+<pre class="prettyprint">
+/*                          /--- What we are checking up against  */
+lt = autoCurry( function( that, tihs ) { return tihs < that; } );
+/*                                \--- Our only "real" argument   */
+</pre>
+<p>And one more...</p>
+<pre class="prettyprint">
+/*
+    /----- This is creating a new anonymous function that
+   |       checks if something is less than 3
+/-----\                                               */
+lt( 3 )( 2 );
+/*     \---/
+         \----- With this we are calling our new anonymous
+                function with one arugument: 2        */
+</pre>
+<p>Whether we call it like <code>lt(3, 2)</code> or <code>lt(3)(2)</code> does not matter.</p>
+
+
+<h3>So let&rsquo;s flip them</h3>
+<p>We have looked the function <code>lt</code>, but this technique is usable for any function that takes a fixed number of arguments. Let&rsquo;s return to <code>filter</code> again. Here are underscores version and one where I flipped the arguments. (I will ignore that <code>filter</code> can work on objects and in some cases take more than just two arguments.)</p>
+<pre class="prettyprint">
+// underscore
+_.filter = function( array, func ) { ... };
+
+// flipped (and let&rsquo;s just assume autoCurried as well)
+filter = function( func, array ) { ... };
+</pre>
+<p>So, exactly like with <code>lt</code>, we can easily and quickly build a new function using currying that filters a list for items less than 3:</p>
+<pre class="prettyprint">
+var filterLessThan3 = filter( lt(3) );
+// Both `filter` and `lt` are now curried functions waiting
+// for their last argument before returning a value
+
+// and we use it...
+var list = [1, 2, 3];
+filterLessThan3( list );    // [1, 2]
+</pre>
+<p>This is entirely impossible with underscore&rsquo;s implementation of the core functions. Even if we were to curry every single one of them, the arguments would still be in the wrong order.</p>
+
+
+<h3>Let&rsquo;s put it together</h3>
+<p>So let&rsquo;s look at an example with some other functions. We have a list of people that are each represented by a list of attributes:</p>
+<pre class="prettyprint">
+var people = [
+  ["Bob Roberts", 31, "m"],
+  ["Julia Smith", 63, "f"],
+  ["Ken Paulsen", 23, "m"],
+  ["Lisa Erikson", 9, "f"]
+];
+</pre>
+<script> var people = [ ["Bob Roberts", 31, "m"], ["Julia Smith", 63, "f"], ["Ken Paulsen", 23, "m"], ["Lisa Erikson", 9, "f"] ]; </script>
+<p>We don&rsquo;t like lists, we want objects instead. We want a list of objects that looks something like this:</p>
+<pre class="prettyprint">
+{
+  name: "Bob Roberts",
+  age: 31,
+  gender: "m"
+}
+</pre>
+<p>Good thing we have <code>listsToObj</code> (<a href="http://casperin.github.io/cherries/#listsToObj">doc</a>). Let&rsquo;s have a look at it:</p>
+<pre class="prettyprint">listsToObj(["a", "b", "c"], [1, 2, 3])   // {a: 1, b: 2, c: 3}</pre>
+<p>So if we curry it with a predefined list, we get something we can use:</p>
+<pre class="prettyprint">
+var makeObj = listsToObj( ["name", "age", "gender"] );
+
+makeObj( ["Bob Roberts", 31, "m"] );
+// { name: "Bob Roberts", age: 31, gender: "m" }
+</pre>
+<p>So why don&rsquo;t we just map <code>makeObj</code> over the entire list and we will get a list of the objects that we want?</p>
+<pre class="prettyprint">
+var betterPeople = map( listsToObj( ["name", "age", "gender"] ), people );
+/* &rarr;
+[
+  {"name":"Bob Roberts","age":31,"gender":"m"},
+  {"name":"Julia Smith","age":63,"gender":"f"},
+  {"name":"Ken Paulsen","age":23,"gender":"m"},
+  {"name":"Lisa Erikson","age":9,"gender":"f"}
+]
+*/
+</pre>
+<p>Or how about we use the fact that <code>map</code> is also autoCurried and create a &ldquo;makeBetterPeople&rdquo; function for reuse?</p>
+<pre class="prettyprint">
+var makeBetterPeople = map( listsToObj( ["name", "age", "gender"] ) );
+
+// and we use it...
+makeBetterPeople(people);     // same list of objects
+</pre>
+<p>That&rsquo;s it! That&rsquo;s autoCurrying. Next up is <code>compose</code> which is infinitely easier to grasp.</p>
+
+
+<h2>compose</h2>
+<p>Let me first say that compose itself is not curried since it takes an optional number of arguments... But it works very well with other curried functions. Here is what it does:</p>
+<pre class="prettyprint">
+// If we have a function f(x) and g(x), and do
+h = compose(f, g);
+// then that is equivalent to
+h = f(g(x));
+// or "first take g of x, and then pass the return value of that into f"
+</pre>
+<p>Notice, that these functions should only accept one argument (at least the outer function, f, should), since the previous function can only return one value at a time.</p>
+<p>Example (where I ignore currying completely):</p>
+<pre class="prettyprint">
+// First we define two functions:
+var add1   = function(x) { return x+1 };
+var double = function(x) { return x*2 };
+
+// Then we compose them together.
+// Notice that compose begins with the last function
+var add1AndDouble = compose(double, add1);
+
+add1AndDouble(2);   // 6  --  (2+1)*2
+</pre>
+<p>And that&rsquo;s it. That&rsquo;s compose. Together with autoCurrying it becomes very powerful. If we add <code>pick</code> (<a href="http://casperin.github.io/cherries/#pick">doc</a>) and <code>dot</code> (<a href="http://casperin.github.io/cherries/#dot">doc</a>) to our arsenal we can do:</p>
+<pre class="prettyprint">
+var getNameAndGenderOfPeopleAbove30 = compose(
+  map( pick(["name", "gender"]) ),
+  filter( compose( gt(30), dot("age") ) ),
+  map( listsToObj(["name", "age", "gender"]) )
+);
+
+getNameAndGenderOfPeopleAbove30(people);
+// [{"name":"Bob Roberts","gender":"m"},{"name":"Julia Smith","gender":"f"}]
+</pre>
+<p>That is pretty powerful and complex. Let me annotate it. Same exact function.</p>
+<pre class="prettyprint">
+// We compose a function of three subfunctions. They will be run from bottom up
+// and you should read them in that order too.
+var getNameAndGenderOfPeopleAbove30 = compose(
+
+  // Step 3: Pick only takes an object, so we map pick over
+  // our object created in Step 1 (and filtered in step 2)
+  // to pick out just the parts we want.
+  map( pick(["name", "gender"]) ),
+
+  // Step 2: We compose a subsubfunction that filter can use:
+  // It takes whatever is passed in (an object representing
+  // a person), and takes the `.age` of it and passes it into
+  // `gt(30)` which returns a boolean: true if the age is
+  // greater than 30, and false if not. This subsubfunction
+  // is used for filtering.
+  filter(
+    compose(  gt(30),     // 2: returns ( age &gt; 30 ) of age (a boolean)
+              dot("age")  // 1: returns person.age of person
+    )
+  ),
+
+  // Step 1: Make a list of objects like we did earlier.
+  map( listsToObj(["name", "age", "gender"]) )
+);
+
+getNameAndGenderOfPeopleAbove30(people);
+// [{"name":"Bob Roberts","gender":"m"},{"name":"Julia Smith","gender":"f"}]
+</pre>
+
+<p>Of course functions doesn&rsquo;t have to be curried to be part of compose. Here we find the average the age of <code>people</code> by using two new functions: <code>pluck</code> (<a href="http://casperin.github.io/cherries/#pluck">doc</a>) and <code>mean</code> (<a href="http://casperin.github.io/cherries/#mean">doc</a>). <code>mean</code> only takes a single argument, so it doesn&rsquo;t make sense to curry.</p>
+<pre class="prettyprint">
+var getAvgAgeOfPeople = compose(
+  mean,                                         // 3: takes the mean of a list of numbers
+  pluck("age"),                                 // 2: [31, 63, 23, 9]
+  map( listsToObj(["name", "age", "gender"]) )  // 1: Get our objects
+);
+
+getAvgAgeOfPeople(people);                      // 31.5
+</pre>
+
+<hr>
+
+<p>And that&rsquo;s it! Go home we are done here for today. Go home and play around some more with this, it really is powerful.</p>
+
+
+  </body>
+</html>
