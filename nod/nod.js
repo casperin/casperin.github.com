@@ -1,6 +1,12 @@
 
 /**
  *
+ *
+ * nod v.2.0
+ * Gorm Casper
+ *
+ *
+ *
  * This is a short breakdown of the code to help you find your way around.
  *
  *
@@ -213,7 +219,7 @@ function nod () {
 
     // Prevent function, used above
     function possiblePreventSubmit (event) {
-        if (configuration.preventSubmit && !isAllValid()) {
+        if (configuration.preventSubmit && !areAll(nod.constants.VALID)) {
             event.preventDefault();
 
             // Show errors to the user
@@ -283,7 +289,7 @@ function nod () {
      */
     function toggleSubmit () {
         if (configuration.submit && configuration.disableSubmit) {
-            nod.getElement(configuration.submit).disabled = !isAllValid();
+            nod.getElement(configuration.submit).disabled = !areAll(nod.constants.VALID);
         }
     }
 
@@ -295,13 +301,14 @@ function nod () {
     mediator.subscribe('all', toggleSubmit);
 
 
-    /**
-     * Returns true if every element is considered valid.
-     */
-    function isAllValid () {
-        return checkHandlers.collection.reduce(function (memo, checkHandler) {
-            return memo && checkHandler.isValid();
-        }, true);
+    function areAll (status) {
+        for (var i = 0, len = checkHandlers.collection.length; i < len; i++) {
+            if (checkHandlers.collection[i].getStatus().status !== status) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
@@ -327,10 +334,11 @@ function nod () {
 
 
 
-    function getStatus (selector) {
-        var element = nod.getElement(selector);
+    function getStatus (selector, showErrorMessage) {
+        var element = nod.getElement(selector),
+            status  = checkHandlers.findOrMake(element).getStatus();
 
-        return domNodes.findOrMake(element).getStatus();
+        return showErrorMessage ? status : status.status;
     }
 
 
@@ -341,7 +349,7 @@ function nod () {
     return {
         add:                    addMetrics,
         remove:                 removeElement,
-        isAllValid:             isAllValid,
+        areAll:                 areAll,
         getStatus:              getStatus,
         configure:              configure,
         setMessageOptions:      setMessageOptions
@@ -417,6 +425,17 @@ nod.makeMediator = function () {
 
 
 
+nod.findCollectionIndex = function (collection, element) {
+    for (var i in collection) {
+        if (collection[i].element === element) {
+            return i;
+        }
+    }
+
+    return -1;
+};
+
+
 
 /**
  * makeCollection
@@ -427,19 +446,10 @@ nod.makeMediator = function () {
 nod.makeCollection = function (maker) {
     var collection = [];
 
-    function findIndex (el) {
-        for (var i in collection) {
-            if (collection[i].element === el) {
-                return i;
-            }
-        }
+    function findOrMake (element) {
+        var index = nod.findCollectionIndex(collection, element);
 
-        return -1;
-    }
-
-    function findOrMake (el, mediator) {
-        var index = findIndex(el);
-
+        // Found
         if (index !== -1) {
             return collection[index];
         }
@@ -451,10 +461,10 @@ nod.makeCollection = function (maker) {
     }
 
     function removeItem (element) {
-        var index = findIndex(element),
+        var index = nod.findCollectionIndex(collection, element),
             item = collection[index];
 
-        if (index === -1) {
+        if (!item) {
             return;
         }
 
@@ -609,35 +619,33 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
     // Runs through all results to see what kind of feedback to show the
     // user.
     function notifyMediator () {
-        var result = nod.constants.VALID, // We assume it's valid
-            errorMessage;
-
-        // Check all results to see if we need to show the error message.
-        for (var result_id in results) {
-            if (results[result_id].status === nod.constants.INVALID) {
-                result = nod.constants.INVALID;
-                errorMessage = results[result_id].errorMessage;
-                break; // Break out of the loop. No reason to check more
-            }
-        }
+        var status = getStatus();
 
         // Event if might be valid we pass along an undefined errorMessage.
         mediator.fire({
             id:             id,
             type:           'result',
-            result:         result,
-            errorMessage:   errorMessage
+            result:         status.status,
+            errorMessage:   status.errorMessage
         });
     }
 
-    function isValid () {
-        for (var key in results) {
-            if (results[key].status !== nod.constants.VALID) {
-                return false;
+    function getStatus () {
+        var status, errorMessage;
+
+        for (var id in results) {
+            status = results[id].status;
+
+            if (results[id].status === nod.constants.INVALID) {
+                errorMessage = results[id].errorMessage;
+                break;
             }
         }
 
-        return true;
+        return {
+            status:        status,
+            errorMessage:  errorMessage
+        };
     }
 
 
@@ -645,7 +653,7 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
         id:             id,
         subscribeTo:    subscribeTo,
         checkHandler:   checkHandler,
-        isValid:        isValid,
+        getStatus:      getStatus,
         element:        element
     };
 };
@@ -814,11 +822,6 @@ nod.makeDomNode = function (element, mediator, configuration) {
     }
 
 
-    function getStatus () {
-        return _status;
-    }
-
-
     function dispose () {
         // First remove any classes
         nod.removeClass(configuration.errorClass || nod.classes.errorClass, parent);
@@ -834,7 +837,6 @@ nod.makeDomNode = function (element, mediator, configuration) {
         subscribeTo:        subscribeTo,
         element:            element,
         setMessageOptions:  setMessageOptions,
-        getStatus:          getStatus,
         dispose:            dispose
     };
 };
