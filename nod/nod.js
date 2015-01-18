@@ -2,7 +2,7 @@
 /**
  *
  *
- * nod v.2.0
+ * nod v.2.0.2
  * Gorm Casper
  *
  *
@@ -120,7 +120,7 @@ function nod () {
             // dom.
             metricSets = elements.map(function (element) {
                 return {
-                    listener:       listeners.findOrMake(element, mediator),
+                    listener:       listeners.findOrMake(element, mediator, metric.triggerEvents),
                     checker:        checkers.findOrMake(element, mediator),
                     checkHandler:   checkHandlers.findOrMake(element, mediator, configuration),
                     domNode:        domNodes.findOrMake(element, mediator, configuration)
@@ -187,7 +187,7 @@ function nod () {
             metricSet.checker.addCheck(checkFunction, checkId);
 
             // We want the check handler to listen for results from the checker
-            metricSet.checkHandler.subscribeTo(checkId, metric.errorMessage);
+            metricSet.checkHandler.subscribeTo(checkId, metric.errorMessage, metric.defaultStatus);
 
 
 
@@ -214,7 +214,7 @@ function nod () {
     function addForm (selector, remove) {
         var form = nod.getElement(selector);
 
-       form.addEventListener('submit', possiblePreventSubmit, false);
+        form.addEventListener('submit', possiblePreventSubmit, false);
     }
 
     // Prevent function, used above
@@ -223,11 +223,21 @@ function nod () {
             event.preventDefault();
 
             // Show errors to the user
-            checkers.collection.forEach(function (checker) {
+            checkers.forEach(function (checker) {
                 checker.performCheck({
                     event: event
                 });
             });
+
+            // Focus on the first invalid element
+            for (var i = 0, len = checkHandlers.length; i < len; i++) {
+                var checkHandler = checkHandlers[i];
+
+                if (checkHandler.getStatus().status === nod.constants.INVALID) {
+                    checkHandler.element.focus();
+                    break;
+                }
+            }
         }
     }
 
@@ -302,8 +312,8 @@ function nod () {
 
 
     function areAll (status) {
-        for (var i = 0, len = checkHandlers.collection.length; i < len; i++) {
-            if (checkHandlers.collection[i].getStatus().status !== status) {
+        for (var i = 0, len = checkHandlers.length; i < len; i++) {
+            if (checkHandlers[i].getStatus().status !== status) {
                 return false;
             }
         }
@@ -446,7 +456,7 @@ nod.findCollectionIndex = function (collection, element) {
 nod.makeCollection = function (maker) {
     var collection = [];
 
-    function findOrMake (element) {
+    collection.findOrMake = function (element) {
         var index = nod.findCollectionIndex(collection, element);
 
         // Found
@@ -458,9 +468,9 @@ nod.makeCollection = function (maker) {
         var item = maker.apply(null, arguments);
         collection.push(item);
         return item;
-    }
+    };
 
-    function removeItem (element) {
+    collection.removeItem = function (element) {
         var index = nod.findCollectionIndex(collection, element),
             item = collection[index];
 
@@ -475,13 +485,9 @@ nod.makeCollection = function (maker) {
 
         // Remove item
         collection.splice(index, 1);
-    }
-
-    return {
-        findOrMake: findOrMake,
-        removeItem: removeItem,
-        collection: collection
     };
+
+    return collection;
 };
 
 
@@ -492,7 +498,7 @@ nod.makeCollection = function (maker) {
  * Takes care of listening to changes to its element and fire them off as
  * events on the mediator for checkers to listen to.
  */
-nod.makeListener = function (element, mediator) {
+nod.makeListener = function (element, mediator, triggerEvents) {
     var id = nod.unique();
 
     function changed (event) {
@@ -507,10 +513,24 @@ nod.makeListener = function (element, mediator) {
     element.addEventListener('change', changed, false);
     element.addEventListener('blur', changed, false);
 
+    if (triggerEvents) {
+        triggerEvents = Array.isArray(triggerEvents) ? triggerEvents : [triggerEvents];
+
+        triggerEvents.forEach(function (eventName) {
+            element.addEventListener(eventName, changed, false);
+        });
+    }
+
     function dispose () {
         element.removeEventListener('input', changed, false);
         element.removeEventListener('change', changed, false);
         element.removeEventListener('blur', changed, false);
+
+        if (triggerEvents) {
+            triggerEvents.forEach(function (eventName) {
+                element.removeEventListener(eventName, changed, false);
+            });
+        }
     }
 
     return {
@@ -566,9 +586,13 @@ nod.makeChecker = function (element, mediator) {
         }
 
         checks.push(function (options) {
+            // If element.value is undefined, then we might be dealing with
+            // another type of element; like <div contenteditable='true'>
+            var value = element.value !== undefined ? element.value : element.innerHTML;
+
             options.element = element;
 
-            checkFunction(callback, element.value, options);
+            checkFunction(callback, value, options);
         });
     }
 
@@ -596,12 +620,12 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
     var results     = {},
         id          = nod.unique();
 
-    function subscribeTo (id, errorMessage) {
+    function subscribeTo (id, errorMessage, defaultStatus) {
         // Create a representation of the type of error in the results
         // object.
         if (!results[id]) {
             results[id] = {
-                status: nod.constants.UNCHECKED,
+                status: defaultStatus || nod.constants.UNCHECKED,
                 errorMessage: errorMessage
             };
         }
