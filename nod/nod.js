@@ -2,7 +2,7 @@
 /**
  *
  *
- * nod v.2.0
+ * nod v.2.0.5
  * Gorm Casper
  *
  *
@@ -46,10 +46,11 @@
  *
  */
 
-function nod () {
+function nod (config) {
     var form,
         configuration   = {},
         mediator        = nod.makeMediator(),
+        eventEmitter    = nod.makeEventEmitter(mediator),
 
         // Creating (empty) collections
         listeners       = nod.makeCollection(nod.makeListener),
@@ -120,7 +121,7 @@ function nod () {
             // dom.
             metricSets = elements.map(function (element) {
                 return {
-                    listener:       listeners.findOrMake(element, mediator),
+                    listener:       listeners.findOrMake(element, mediator, metric.triggerEvents, configuration),
                     checker:        checkers.findOrMake(element, mediator),
                     checkHandler:   checkHandlers.findOrMake(element, mediator, configuration),
                     domNode:        domNodes.findOrMake(element, mediator, configuration)
@@ -151,7 +152,7 @@ function nod () {
             var triggerElements = nod.getElements(selector);
 
             triggerElements.forEach(function (element) {
-                var listener = listeners.findOrMake(element, mediator);
+                var listener = listeners.findOrMake(element, mediator, null, configuration);
 
                 checker.subscribeTo(listener.id);
             });
@@ -187,15 +188,18 @@ function nod () {
             metricSet.checker.addCheck(checkFunction, checkId);
 
             // We want the check handler to listen for results from the checker
-            metricSet.checkHandler.subscribeTo(checkId, metric.errorMessage);
+            metricSet.checkHandler.subscribeTo(checkId, metric.errorMessage, metric.defaultStatus);
 
 
+            if (configuration.noDom) {
+                eventEmitter.subscribe(metricSet.checkHandler.id);
+            } else {
+                // :: checkHandler -> domNode
 
-            // :: checkHandler -> domNode
-
-            // The checkHandler has its own id (and only ever needs one), so we
-            // just ask the domNode to listen for that.
-            metricSet.domNode.subscribeTo(metricSet.checkHandler.id);
+                // The checkHandler has its own id (and only ever needs one), so we
+                // just ask the domNode to listen for that.
+                metricSet.domNode.subscribeTo(metricSet.checkHandler.id);
+            }
         });
 
 
@@ -211,10 +215,10 @@ function nod () {
      * `preventSubmit` in the configuration, then we stop the commit from
      * happening unless all the elements are valid.
      */
-    function addForm (selector, remove) {
+    function addForm (selector) {
         var form = nod.getElement(selector);
 
-       form.addEventListener('submit', possiblePreventSubmit, false);
+        form.addEventListener('submit', possiblePreventSubmit, false);
     }
 
     // Prevent function, used above
@@ -223,11 +227,21 @@ function nod () {
             event.preventDefault();
 
             // Show errors to the user
-            checkers.collection.forEach(function (checker) {
+            checkers.forEach(function (checker) {
                 checker.performCheck({
                     event: event
                 });
             });
+
+            // Focus on the first invalid element
+            for (var i = 0, len = checkHandlers.length; i < len; i++) {
+                var checkHandler = checkHandlers[i];
+
+                if (checkHandler.getStatus().status === nod.constants.INVALID) {
+                    checkHandler.element.focus();
+                    break;
+                }
+            }
         }
     }
 
@@ -302,8 +316,8 @@ function nod () {
 
 
     function areAll (status) {
-        for (var i = 0, len = checkHandlers.collection.length; i < len; i++) {
-            if (checkHandlers.collection[i].getStatus().status !== status) {
+        for (var i = 0, len = checkHandlers.length; i < len; i++) {
+            if (checkHandlers[i].getStatus().status !== status) {
                 return false;
             }
         }
@@ -343,17 +357,34 @@ function nod () {
 
 
 
+    function performCheck (selector) {
+        var cs = selector ? nod.getElements(selector).map(checkers.findOrMake) : checkers;
+
+        cs.forEach(function(checker) {
+            checker.performCheck();
+        });
+    }
+
+
+
     /**
      * Internal functions that are exposed to the public.
      */
-    return {
+    var nodInstace = {
         add:                    addMetrics,
         remove:                 removeElement,
         areAll:                 areAll,
         getStatus:              getStatus,
         configure:              configure,
-        setMessageOptions:      setMessageOptions
+        setMessageOptions:      setMessageOptions,
+        performCheck:           performCheck
     };
+
+    if (config) {
+        nodInstace.configure(config);
+    }
+
+    return nodInstace;
 }
 
 
@@ -446,7 +477,7 @@ nod.findCollectionIndex = function (collection, element) {
 nod.makeCollection = function (maker) {
     var collection = [];
 
-    function findOrMake (element) {
+    collection.findOrMake = function (element) {
         var index = nod.findCollectionIndex(collection, element);
 
         // Found
@@ -458,9 +489,9 @@ nod.makeCollection = function (maker) {
         var item = maker.apply(null, arguments);
         collection.push(item);
         return item;
-    }
+    };
 
-    function removeItem (element) {
+    collection.removeItem = function (element) {
         var index = nod.findCollectionIndex(collection, element),
             item = collection[index];
 
@@ -475,13 +506,9 @@ nod.makeCollection = function (maker) {
 
         // Remove item
         collection.splice(index, 1);
-    }
-
-    return {
-        findOrMake: findOrMake,
-        removeItem: removeItem,
-        collection: collection
     };
+
+    return collection;
 };
 
 
@@ -492,8 +519,9 @@ nod.makeCollection = function (maker) {
  * Takes care of listening to changes to its element and fire them off as
  * events on the mediator for checkers to listen to.
  */
-nod.makeListener = function (element, mediator) {
-    var id = nod.unique();
+nod.makeListener = function (element, mediator, triggerEvents, configuration) {
+    var id = nod.unique(),
+        $element;
 
     function changed (event) {
         mediator.fire({
@@ -507,10 +535,34 @@ nod.makeListener = function (element, mediator) {
     element.addEventListener('change', changed, false);
     element.addEventListener('blur', changed, false);
 
+    if (configuration.jQuery) {
+        $element = configuration.jQuery(element);
+
+        $element.on('propertychange change click keyup input paste', changed);
+    }
+
+    if (triggerEvents) {
+        triggerEvents = Array.isArray(triggerEvents) ? triggerEvents : [triggerEvents];
+
+        triggerEvents.forEach(function (eventName) {
+            element.addEventListener(eventName, changed, false);
+        });
+    }
+
     function dispose () {
         element.removeEventListener('input', changed, false);
         element.removeEventListener('change', changed, false);
         element.removeEventListener('blur', changed, false);
+
+        if ($element) {
+            $element.off();
+        }
+
+        if (triggerEvents) {
+            triggerEvents.forEach(function (eventName) {
+                element.removeEventListener(eventName, changed, false);
+            });
+        }
     }
 
     return {
@@ -566,9 +618,13 @@ nod.makeChecker = function (element, mediator) {
         }
 
         checks.push(function (options) {
+            // If element.value is undefined, then we might be dealing with
+            // another type of element; like <div contenteditable='true'>
+            var value = element.value !== undefined ? element.value : element.innerHTML;
+
             options.element = element;
 
-            checkFunction(callback, element.value, options);
+            checkFunction(callback, value, options);
         });
     }
 
@@ -596,12 +652,12 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
     var results     = {},
         id          = nod.unique();
 
-    function subscribeTo (id, errorMessage) {
+    function subscribeTo (id, errorMessage, defaultStatus) {
         // Create a representation of the type of error in the results
         // object.
         if (!results[id]) {
             results[id] = {
-                status: nod.constants.UNCHECKED,
+                status: defaultStatus || nod.constants.UNCHECKED,
                 errorMessage: errorMessage
             };
         }
@@ -626,6 +682,7 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
             id:             id,
             type:           'result',
             result:         status.status,
+            element:        element,
             errorMessage:   status.errorMessage
         });
     }
@@ -663,17 +720,25 @@ nod.makeCheckHandler = function (element, mediator, configuration) {
 
 // Helper functions for `makeDomNode`.
 nod.hasClass = function (className, el) {
-    return !!el.className.match(new RegExp('(\\s|^)'+className+'(\\s|$)'));
+    if (el.classList) {
+        return el.classList.contains(className);
+    } else {
+        return !!el.className.match(new RegExp('(\\s|^)'+className+'(\\s|$)'));
+    }
 };
 
 nod.removeClass = function (className, el) {
-    if (nod.hasClass(className, el)) {
-        el.className = el.className.replace(new RegExp('(\\s|^)'+className+'(\\s|$)'), '');
+    if (el.classList) {
+        el.classList.remove(className);
+    } else if (nod.hasClass(className, el)) {
+            el.className = el.className.replace(new RegExp('(?:^|\\s)'+className+'(?!\\S)'), '');
     }
 };
 
 nod.addClass = function (className, el) {
-    if (!nod.hasClass(className, el)) {
+    if (el.classList) {
+        el.classList.add(className);
+    } else if (!nod.hasClass(className, el)) {
         el.className += ' ' + className;
     }
 };
@@ -728,7 +793,10 @@ nod.makeDomNode = function (element, mediator, configuration) {
         customSpan          = false;
 
     span.style.display = 'none';
-    parent.appendChild(span);
+
+    if (!configuration.noDom) {
+        parent.appendChild(span);
+    }
 
     // Updates the class of the parent to match the status of the element.
     function updateParent (status) {
@@ -838,6 +906,29 @@ nod.makeDomNode = function (element, mediator, configuration) {
         element:            element,
         setMessageOptions:  setMessageOptions,
         dispose:            dispose
+    };
+};
+
+
+nod.makeEventEmitter = function (mediator) {
+    var customEvent;
+
+    function emit (options) {
+        if (CustomEvent) {
+            customEvent = new CustomEvent('nod.validation', {detail: options});
+
+            options.element.dispatchEvent(customEvent);
+        } else {
+            throw('nod.validate tried to fire a custom event, but the browser does not support CustomEvent\'s');
+        }
+    }
+
+    function subscribe (id) {
+        mediator.subscribe(id, emit);
+    }
+
+    return {
+        subscribe: subscribe
     };
 };
 
@@ -1076,7 +1167,7 @@ nod.checkFunctions = {
 
         return function someRadio (callback, value, options) {
             var result = radioElements.reduce(function (memo, element) {
-                return memo || options.element.checked;
+                return memo || element.checked;
             }, false);
 
             callback(result);
