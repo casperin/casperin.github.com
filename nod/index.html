@@ -1,0 +1,533 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>nod.js</title>
+        <link href='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css' rel='stylesheet'>
+        <link href="prettify/prettify.css">
+        <style>
+            .container {
+                margin-bottom: 50px;
+            }
+            .nod-error-message {
+                color: #c00;
+            }
+
+            .form-group {
+                width: 300px;
+            }
+
+            .form-group .form-control-feedback {
+                display: none;
+            }
+
+            .form-group.has-success .form-control-feedback.glyphicon-ok,
+            .form-group.has-error .form-control-feedback.glyphicon-remove {
+                display: block;
+            }
+            /* prettify */
+            .com { color: #93a1a1; }
+            .lit { color: #195f91; }
+            .pun, .opn, .clo { color: #93a1a1; }
+            .fun { color: #dc322f; }
+            .str, .atv { color: #D14; }
+            .kwd, .prettyprint .tag { color: #1e347b; }
+            .typ, .atn, .dec, .var { color: teal; }
+            .pln { color: #48484c; }
+
+            .prettyprint {
+                padding: 8px;
+                background-color: #f7f7f9;
+                border: 1px solid #e1e1e8;
+            }
+            .prettyprint.linenums {
+                -webkit-box-shadow: inset 40px 0 0 #fbfbfc, inset 41px 0 0 #ececf0;
+                -moz-box-shadow: inset 40px 0 0 #fbfbfc, inset 41px 0 0 #ececf0;
+                box-shadow: inset 40px 0 0 #fbfbfc, inset 41px 0 0 #ececf0;
+            }
+            /* Specify class=linenums on a pre to get line numbering */
+            ol.linenums {
+                margin: 0 0 0 33px; /* IE indents via margin-left */
+            }
+            ol.linenums li {
+                padding-left: 12px;
+                color: #bebec5;
+                line-height: 20px;
+                text-shadow: 0 1px 0 #fff;
+            }
+        </style>
+        <script src='nod.js'></script>
+        <script>
+            // Since Bootstrap is used throughout the examples, I will
+            // overwrite nod's default success and error classes.
+            nod.classes.successClass = 'has-success';
+            nod.classes.errorClass = 'has-error';
+        </script>
+    </head>
+    <body>
+        <div class='container'>
+            <a href="//github.com/casperin/nod" style="margin-top:10px;" class="btn btn-success pull-right">
+                <span class="glyphicon glyphicon-heart"></span> Fork me
+            </a>
+            <h1>Nod v.2.0.3 <small>A frontend validation plugin</small></h1>
+            <hr>
+            <p>Writing frontend validation for forms is painfully boring. So I
+            made this in the hopes that it will help make it a little less
+            agonizing for you.</p>
+            <p>It's designed to</p>
+            <ul>
+                <li>Keep validation configuration away from the elements to keep the html clean and simple.</li>
+                <li>Work with css selectors so you can target more fields with just one "rule".</li>
+                <li>Be flexible. Nod is flexible and will fit most html structures and is made with "hacking" in mind.</li>
+                <li>Be extensible. You can easily define your own functions to validate for (and many other things).</li>
+            </ul>
+            <p>Nod is not targeted directly at Bootstrap, but it should work
+            fairly well with the newest versions (and probably older ones
+            too).</p>
+
+            <h2>Practical info</h2>
+            <ul>
+                <li>License: MIT.</li>
+                <li>npm: <code>npm install nod-validate</code></li>
+                <li>Dependencies: None.</li>
+                <li>Browser support: Chrome (newest) / FF (newest) / ie9+.</li>
+            </ul>
+
+            <h2>A few examples</h2>
+            <p>The examples you see below are made specifically with Bootstrap
+            in mind, but what isn't directly clear from the examples, is that I
+            had to do a small modification before starting, to get the colors
+            and check mark (or cross) working properly. The problem is that the
+            container (the parent of the element) is required to have the class
+            "has-success" or "has-error" in Bootstrap which nod does not do by
+            default. Here's a quick solution:</p>
+            <pre class="prettyprint lang-js">nod.classes.successClass = 'has-success';<br>nod.classes.errorClass = 'has-error';</pre>
+            <p>This is basically overwriting nod's default classes for the
+            parent, which is exactly what you want to do in this case.</p>
+
+
+            <hr>
+            <h3>Simple validation</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>Simple validation of email, password, a "must check" checkbox, and disabling the submit button unless all input elements have valid inputs.</p>
+                    <form>
+                        <div class="form-group has-feedback">
+                            <label for="exampleInputEmail1">Email address</label>
+                            <input type="email" class="form-control" id="exampleInputEmail1" placeholder="Enter email">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+                        <div class="form-group has-feedback">
+                            <label for="exampleInputPassword1">Password</label>
+                            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" id="exampleCheckBox1"> Check me out
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-default" id="exampleSubmitButton1">Submit</button>
+                        <script>
+                            (function () {
+                                var n = nod();
+
+                                n.configure({
+                                    submit: '#exampleSubmitButton1',
+                                    disableSubmit: true
+                                });
+
+                                n.add([{
+                                    selector: '#exampleInputEmail1',
+                                    validate: 'email',
+                                    errorMessage: 'That is not an email'
+                                }, {
+                                    selector: '#exampleInputPassword1',
+                                    validate: 'min-length:3',
+                                    errorMessage: 'Should be at least 3 characters long!'
+                                }, {
+                                    selector: '#exampleCheckBox1',
+                                    validate: 'checked',
+                                    errorMessage: 'You must check me!'
+                                }]);
+                            })();
+                        </script>
+                    </form>
+                </div>
+
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod();
+
+myNod.configure({
+    submit: '.submit-btn',
+    disableSubmit: true
+});
+
+myNod.add([{
+    selector: '.email-input',
+    validate: 'email',
+    errorMessage: 'That is not an email'
+}, {
+    selector: '.password-input',
+    validate: 'min-length:3',
+    errorMessage: 'Should be at least 3 characters long!'
+}, {
+    selector: '.checkbox',
+    validate: 'checked',
+    errorMessage: 'You must check me!'
+}]);</pre>
+                </div>
+            </div>
+
+
+
+            <hr>
+
+            <h3>Multiple rules and targets</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>You can make one "rule" to target more than one element (in this example .name can not be empty), and one element can have multiple checks attached to it (#first-name must both contain something, and can not be "Captain").</p>
+                    <form>
+                        <div class="form-group has-feedback">
+                            <label for="first-name">First name</label>
+                            <input type="email" class="form-control name" id="first-name" placeholder="First name">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+                        <div class="form-group has-feedback">
+                            <label for="last-name">Last name</label>
+                            <input type="password" class="form-control name" id="last-name" placeholder="Last name">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+
+                        <script>
+                            (function () {
+                                var n = nod();
+
+                                n.add([{
+                                    selector: '.name',
+                                    validate: 'presence',
+                                    errorMessage: 'Don\'t leave empty.'
+                                }, {
+                                    selector: '#first-name',
+                                    validate: 'not:Captain',
+                                    errorMessage: 'You are not a captain! (I think)'
+                                }]);
+                            })();
+                        </script>
+                    </form>
+                </div>
+
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod();
+
+myNod.add([{
+    selector: '.name',
+    validate: 'presence',
+    errorMessage: 'Don\'t leave empty.'
+}, {
+    selector: '#first-name',
+    validate: 'not:Captain',
+    errorMessage: 'You are not a captain! (I think)'
+}]);</pre>
+                </div>
+            </div>
+
+
+
+
+
+            <hr>
+
+            <h3>Using your own function to check the input</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>There are two ways to do this. If the function is only needed once, just add it to your <code>validate</code> property (first element); but if it is needed across your platform, it will make sense to add it to the general library and reuse it (second example).</p>
+                    <form>
+                        <div class="form-group has-feedback">
+                            <label for="divBy2">Must be divisible by two</label>
+                            <input type="text" class="form-control" id="divBy2" placeholder="Some number">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+                        <div class="form-group has-feedback">
+                            <label for="divBy3">Divisible by three</label>
+                            <input type="text" class="form-control" id="divBy3" placeholder="Another number">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+
+                        <script>
+                            (function () {
+
+                                var n = nod();
+
+                                n.add({
+                                    selector: '#divBy2',
+                                    validate: function (callback, value) {
+                                        var number = parseInt(value, 10);
+
+                                        callback(number % 2 === 0);
+                                    },
+                                    errorMessage: 'Must be disible by two'
+                                });
+
+
+                                nod.checkFunctions.divByX = function (x) {
+                                    x = parseInt(x, 10);
+
+                                    return function (callback, value) {
+                                        var number = parseInt(value, 10);
+
+                                        callback(number % x === 0);
+                                    };
+                                };
+                                
+                                n.add({
+                                    selector: '#divBy3',
+                                    validate: 'divByX:3',
+                                    errorMessage: 'Your number must be divisable by 3'
+                                });
+                            })();
+                        </script>
+                    </form>
+                </div>
+
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod();
+
+// First the simple use case of just one function used once.
+myNod.add({
+    selector: '#divBy2',
+    validate: function (callback, value) {
+        var number = parseInt(value, 10);
+
+        callback(number % 2 === 0);
+    },
+    errorMessage: 'Must be disible by two'
+});
+
+
+// Here we are adding our own function. Notice we take a parameter,
+// that can later be configured when the function is used.
+nod.checkFunctions.divByX = function (x) {
+    x = parseInt(x, 10);
+
+    return function (callback, value) {
+        var number = parseInt(value, 10);
+
+        callback(number % x === 0);
+    };
+};
+
+myNod.add({
+    selector: '#divBy3',
+    validate: 'divByX:3',
+    errorMessage: 'Your number must be divisable by 3'
+});</pre>
+                </div>
+            </div>
+
+            <hr>
+
+            <h3>Works with contentEditable</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>It can work with <code>contentEditable</code> if you provide nod with <code>keyup</code> as a <code>triggerEvent</code>.</p>
+                    <div class="form-group has-feedback">
+                        <div class='some-div' contenteditable='true' style='background:#ffc'>Click here and edit me! I must contain the word "Hello" though</div>
+                    </div>
+                    <script>
+                        (function () {
+                            var n = nod();
+
+                            n.add({
+                                selector: '.some-div',
+                                validate: 'contains:Hello',
+                                errorMessage: 'Must contain "Hello"!',
+                                triggerEvents: 'keyup'
+                            });
+                        })();
+                    </script>
+                </div>
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod();
+
+myNod.add({
+    selector: '.some-div',
+    validate: 'contains:Hello',
+    errorMessage: 'Must contain "Hello"!',
+    // can be an array of events if you need more
+    triggerEvents: 'keyup'
+});</pre>
+                </div>
+            </div>
+
+
+
+
+            <hr>
+
+            <h3>Example of fairly complex checkbox to input element</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>Here we are check whether a checkbox has been ticket, and if so, we check the value if it is a valid email. We also tell nod to listen for events from the checkbox (via <code>triggeredBy</code>) and run the check whenever it triggers an event.</p>
+                    <form>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" class="send-spam-checkbox"> Send me lots of spam!
+                            </label>
+                        </div>
+                        <div class="form-group has-feedback">
+                            <label for="spam-mail">Your email</label>
+                            <input type="email" class="form-control" id="spam-mail" placeholder="Your email address">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+
+                        <script>
+                            (function () {
+                                var n = nod(),
+                                    spamCheckBox = nod.getElement('.send-spam-checkbox'),
+                                    checkEmail = nod.checkFunctions.email();
+
+                                n.add({
+                                    selector: '#spam-mail',
+                                    triggeredBy: spamCheckBox,
+                                    validate: function (callback, value) {
+                                        if (spamCheckBox.checked) {
+                                            checkEmail(callback, value);
+                                        } else {
+                                            callback(true);
+                                        }
+                                    },
+                                    errorMessage: 'If you checked the checkbox, then you must fill out the input field.'
+                                });
+                            })();
+                        </script>
+                    </form>
+                </div>
+
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod(),
+    // The raw dom element
+    spamCheckBox = nod.getElement('.send-spam-checkbox'),
+    // Knowing this, requires reading the source code
+    checkEmail = nod.checkFunctions.email();
+
+myNod.add({
+    selector: '#spam-mail',
+    triggeredBy: spamCheckBox,
+    validate: function (callback, value) {
+        if (spamCheckBox.checked) {
+            // Here you can just do any kind of check
+            // you like. No need to use one of the
+            // predefined functions.
+            checkEmail(callback, value);
+        } else {
+            // If checkbox isn't checked, then it
+            // doesn't matter if #spam-mail is filled
+            // out or not, so we just return true to
+            // indicate that the element is valid.
+            callback(true);
+        }
+    },
+    errorMessage: 'If you checked the checkbox, then you must fill out the input field.'
+});</pre>
+                </div>
+            </div>
+
+
+
+
+            <hr>
+
+            <h3>Retrieving information</h3>
+            <div class='row'>
+                <div class='col-md-6'>
+                    <p>Just a quick example to show that you can listen in on the checks as they are happening.</p>
+                    <form>
+                        <div class="form-group has-feedback">
+                            <label for="tap-input">Your email</label>
+                            <input type="email" class="form-control" id="tap-input" placeholder="Your email address">
+                            <span class="glyphicon glyphicon-ok form-control-feedback" aria-hidden="true"></span>
+                            <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true"></span>
+                        </div>
+
+                        <pre id='json-result' class='prettypring lang-js'></pre>
+
+                        <script>
+                            (function () {
+                                var n = nod(),
+                                    jsonResult = document.getElementById('json-result');
+
+                                n.configure('tap', function (result) {
+                                    result.element = '[ The raw dom element being checked ]';
+
+                                    jsonResult.innerHTML = JSON.stringify(result, null, 4);
+                                });
+
+
+                                n.add({
+                                    selector: '#tap-input',
+                                    validate: 'between-length:5:10',
+                                    errorMessage: 'Must be between 5 and 10 characters long.'
+                                });
+                            })();
+                        </script>
+                    </form>
+                </div>
+
+                <div class='col-md-6'>
+                    <pre class="prettyprint lang-js">
+var myNod = nod(),
+    jsonResult = document.getElementById('json-result');
+
+myNod.configure('tap', function (result) {
+    // This can't be stringified, so I'll
+    // replace in this example.
+    result.element = '[ The raw dom element being checked ]';
+
+    jsonResult.innerHTML = JSON.stringify(result, null, 4);
+});
+
+
+myNod.add({
+    selector: '#tap-input',
+    validate: 'between-length:5:10',
+    errorMessage: 'Must be between 5 and 10 characters long.'
+});</pre>
+                </div>
+            </div>
+
+
+            <hr>
+
+            <h2>There's more</h2>
+
+            <p>The library is about as flexible as I could get away with, and
+            can do a lot more than what you find just above. The full
+            documentation is on Github, and don't be afraid to open an issue or
+            shoot me a message if you have any problems or wishes (that aren't
+            too specific to your case).</p>
+
+            <a href="//github.com/casperin/nod" style="margin-top:10px;" class="btn btn-success">
+                <span class="glyphicon glyphicon-heart"></span> Fork me
+            </a>
+
+
+        </div>
+        <script src='https://code.jquery.com/jquery-2.1.3.min.js'></script>
+        <script src='http://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js'></script>
+        <script src="prettify/prettify.js"></script>
+        <script>!function($) { $(function(){ window.prettyPrint && prettyPrint() }) }(window.jQuery);</script>
+    </body>
+</html>
